@@ -1,0 +1,172 @@
+.permission-settings {
+  padding: 20px;
+}
+
+.permission-settings .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.permission-settings .page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #181C32;
+}
+
+.permission-settings .tab-container {
+  margin-bottom: 20px;
+}
+
+.permission-settings .table-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.permission-settings .table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.permission-settings .add-button {
+  margin-left: auto;
+}
+
+/* 팝업 스타일 */
+.permission-settings .popup-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.permission-settings .popup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.permission-settings .action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* 권한 설정 스타일 */
+.permission-settings .permission-filter {
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.permission-settings .permission-editor {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.permission-settings .permission-groups-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.permission-settings .permission-group {
+  margin-bottom: 8px;
+  border: 1px solid #E4E6EF;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: white;
+}
+
+.permission-settings .permission-group-header {
+  background-color: #F5F8FA;
+  padding: 8px 12px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #E4E6EF;
+}
+
+.permission-settings .permission-group-content {
+  padding: 12px;
+}
+
+.permission-settings .permission-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.permission-settings .permission-item:hover {
+  background-color: rgba(245, 248, 250, 0.5);
+}
+
+.permission-settings .permission-item-label {
+  margin-left: 8px;
+  flex-grow: 1;
+}
+
+.permission-settings .permission-description {
+  color: #5E6278;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.permission-settings .role-name-editor {
+  margin-bottom: 24px;
+}
+
+/* 필터링 스타일 */
+.permission-settings .filter-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.permission-settings .filter-input {
+  flex-grow: 1;
+  max-width: 300px;
+}
+
+.permission-settings .filter-options {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 권한 항목 스타일 */
+.permission-settings .permission-item.granted {
+  color: #3699FF;
+}
+
+.permission-settings .permission-item.not-granted {
+  color: #464E5F;
+}
+
+/* 스크롤바 스타일 */
+.permission-settings .permission-editor::-webkit-scrollbar {
+  width: 8px;
+}
+
+.permission-settings .permission-editor::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.permission-settings .permission-editor::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.permission-settings .permission-editor::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+} 

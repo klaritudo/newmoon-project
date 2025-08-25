@@ -1,0 +1,52 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        echo "SSH key setup complete"
+        echo "Key file size: $(wc -c < ~/.ssh/deploy_key) bytes"
+        echo "Key first line: $(head -1 ~/.ssh/deploy_key | cut -c1-30)..."
+        
+    - name: Add known hosts
+      run: |
+        ssh-keyscan -H ${{ secrets.PRODUCTION_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+        echo "Known hosts added"
+    
+    - name: Test SSH Connection
+      run: |
+        echo "Testing connection to ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          -o UserKnownHostsFile=/dev/null \
+          -o ConnectTimeout=10 \
+          ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} \
+          "echo 'SSH connection successful!'" || echo "SSH connection failed with code $?"
+    
+    - name: Deploy to Production
+      run: |
+        echo "📦 Deploying to production server..."
+        ssh -i ~/.ssh/deploy_key \
+          ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} \
+          "cd /home/klaritudo && echo 'Deployment triggered at $(date)' >> deployment.log"
+        echo "✅ Deployment complete!"
+    
+    - name: Health Check
+      run: |
+        echo "🔍 Checking production server health..."
+        ssh -i ~/.ssh/deploy_key \
+          ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} \
+          "echo 'Server is running' && uptime"

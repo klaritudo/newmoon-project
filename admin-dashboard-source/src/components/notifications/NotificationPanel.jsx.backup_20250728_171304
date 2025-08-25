@@ -1,0 +1,750 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { 
+  selectAllNotifications,
+  selectNotificationSoundEnabled,
+  generateRandomNotifications,
+  updateNotificationCount,
+  initializeNotifications
+} from '../../features/notifications/notificationsSlice';
+import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import WarningOutlinedIcon from '@mui/icons-material/WarningOutlined';
+import { usePermission } from '../../hooks/usePermission';
+import { useSocket } from '../../context/SocketContext';
+
+/**
+ * 알림판 컴포넌트 - 모던한 디자인으로 개선
+ * 모든 페이지에서 스티키 기능으로 표시됨
+ */
+const NotificationPanel = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const notifications = useSelector(selectAllNotifications);
+  const soundEnabledGlobal = useSelector(selectNotificationSoundEnabled);
+  const [isCompact, setIsCompact] = useState(window.innerWidth <= 800);
+  const [, forceUpdate] = useState({});
+  const { canViewLayout } = usePermission();
+  const { socketService } = useSocket();
+  
+  // 알람 관련 상태
+  const [alarmSettings, setAlarmSettings] = useState({});
+  const activeAlarmsRef = useRef(new Map()); // eventType -> {timerId, isPlaying} (ref로 변경)
+  const audioRefs = useRef(new Map()); // eventType -> Audio instance
+  const [userInteracted, setUserInteracted] = useState(false); // 사용자 상호작용 추적
+  const playAlarmSoundRef = useRef(null); // playAlarmSound 함수 ref
+  const stopAlarmRef = useRef(null); // stopAlarm 함수 ref
+  
+  // 권한 변경 시 강제 리렌더링
+  useEffect(() => {
+    const handlePermissionsUpdate = () => {
+      console.log('NotificationPanel: 권한이 업데이트되어 리렌더링합니다.');
+      forceUpdate({});
+    };
+    
+    window.addEventListener('permissionsUpdated', handlePermissionsUpdate);
+    return () => {
+      window.removeEventListener('permissionsUpdated', handlePermissionsUpdate);
+    };
+  }, []);
+
+  // Socket 연결 시 초기 데이터 요청
+  useEffect(() => {
+    if (!socketService) return;
+    
+    // Socket 연결되면 서버에 초기 알림 데이터 요청
+    const requestInitialData = () => {
+      console.log('[알림판] Socket 연결됨, 초기 데이터 요청');
+      socketService.emit('notifications:request-initial-data');
+    };
+    
+    // Socket이 이미 연결되어 있으면 즉시 요청
+    if (socketService.isConnected) {
+      requestInitialData();
+    }
+    
+    // Socket 연결 이벤트 리스너
+    socketService.on('connect', requestInitialData);
+    
+    return () => {
+      socketService.off('connect', requestInitialData);
+    };
+  }, [socketService]);
+
+  // 알람 설정 불러오기 (WebSocket)
+  useEffect(() => {
+    if (!socketService) return;
+    
+    const requestAlarmSettings = () => {
+      console.log('[알람설정] WebSocket으로 설정 요청');
+      socketService.emit('alarms:request-settings');
+    };
+    
+    // Socket이 이미 연결되어 있으면 즉시 요청
+    if (socketService.isConnected) {
+      requestAlarmSettings();
+    }
+    
+    // Socket 연결 이벤트 리스너
+    socketService.on('connect', requestAlarmSettings);
+    
+    return () => {
+      socketService.off('connect', requestAlarmSettings);
+    };
+  }, [socketService]);
+
+  // 화면 크기 변경 감지
+  useEffect(() => {
+    const handleResize = () => {
+      setIsCompact(window.innerWidth <= 800);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+  
+  // notification-panel 레이아웃 권한 체크
+  const hasPermission = canViewLayout('notification-panel');
+  
+  useEffect(() => {
+    if (!hasPermission) {
+      console.log('NotificationPanel: notification-panel 권한이 제한되어 숨깁니다.');
+    }
+  }, [hasPermission]);
+
+  // 알람음 재생 함수
+  const playAlarmSound = useCallback((eventType, soundFile, interval) => {
+    console.log(`[알람재생] ${eventType} - 파일: ${soundFile}, 간격: ${interval}초`);
+    console.log(`[알람재생 체크] userInteracted: ${userInteracted}, soundEnabledGlobal: ${soundEnabledGlobal}, soundFile: ${soundFile}`);
+    
+    if (!soundFile) {
+      console.log('[알람재생 실패] soundFile이 없습니다');
+      return;
+    }
+    if (!userInteracted) {
+      console.log('[알람재생 실패] 사용자 상호작용이 필요합니다');
+      return;
+    }
+    if (!soundEnabledGlobal) {
+      console.log('[알람재생 실패] 전역 알림음이 꺼져있습니다');
+      return;
+    }
+    
+    // 이전 알람 정지
+    stopAlarm(eventType);
+    
+    // 오디오 생성 - 백엔드 서버의 public 폴더로 접근
+    // 프로덕션에서는 nginx가, 개발에서는 Vite 프록시가 처리
+    const publicUrl = window.API_CONFIG?.PUBLIC_URL || '/public';
+    const audioUrl = `${publicUrl}/alarm-sounds/default/${encodeURIComponent(soundFile)}`;
+    const audio = new Audio(audioUrl);
+    audio.loop = false;
+    
+    console.log(`[알람음 생성] URL: ${audioUrl}`);
+    
+    audioRefs.current.set(eventType, audio);
+    
+    // 재생 함수 - 재생 완료 후 interval 만큼 대기
+    const playWithDelay = () => {
+      const currentAudio = audioRefs.current.get(eventType);
+      if (!currentAudio) return;
+      
+      currentAudio.currentTime = 0;
+      currentAudio.play().catch(error => {
+        console.error('알람음 재생 실패:', error);
+      });
+    };
+    
+    // 첫 재생
+    playWithDelay();
+    
+    // 활성 알람으로 표시 (재생 중 상태)
+    activeAlarmsRef.current.set(eventType, { timerId: null, isPlaying: true });
+    
+    // 반복 재생를 위한 interval 설정 - 오디오 재생 완료 후 interval 대기
+    const scheduleNextPlay = () => {
+      const currentAudio = audioRefs.current.get(eventType);
+      if (!currentAudio) return;
+      
+      // 오디오 재생이 끝나면 interval 후 다시 재생
+      currentAudio.onended = () => {
+        console.log(`[알람음 종료] ${eventType} - ${interval}초 후 다시 재생`);
+        
+        // 현재 알람이 여전히 활성 상태인지 확인
+        const alarmState = activeAlarmsRef.current.get(eventType);
+        if (!alarmState) return;
+        
+        const timeoutId = setTimeout(() => {
+          if (activeAlarmsRef.current.has(eventType)) {
+            playWithDelay();
+            scheduleNextPlay();
+          }
+        }, interval * 1000);
+        
+        // timeout ID를 저장 (정지 시 clear하기 위해)
+        activeAlarmsRef.current.set(eventType, { timerId: timeoutId, isPlaying: false });
+      };
+    };
+    
+    scheduleNextPlay();
+  }, [userInteracted, soundEnabledGlobal]);
+
+  // 알람 정지 함수
+  const stopAlarm = useCallback((eventType) => {
+    console.log(`[알람정지] ${eventType}`);
+    
+    // interval/timeout 정리
+    if (activeAlarmsRef.current.has(eventType)) {
+      const alarmState = activeAlarmsRef.current.get(eventType);
+      if (alarmState && alarmState.timerId) {
+        clearTimeout(alarmState.timerId); // setTimeout clear
+      }
+      activeAlarmsRef.current.delete(eventType);
+    }
+    
+    // 오디오 정리
+    const audio = audioRefs.current.get(eventType);
+    if (audio) {
+      audio.onended = null; // 이벤트 핸들러 제거
+      audio.pause();
+      audio.currentTime = 0;
+      audioRefs.current.delete(eventType);
+    }
+  }, []);
+
+  // 알림 변경 감지 및 알람 처리
+  useEffect(() => {
+    console.log('[알림 감지] notifications:', notifications);
+    console.log('[알림 감지] alarmSettings:', alarmSettings);
+    
+    Object.entries(notifications).forEach(([id, notification]) => {
+      const eventTypeMap = {
+        'member-registration': 'registration',
+        'deposit-inquiry': 'depositInquiry',
+        'withdrawal-inquiry': 'withdrawalInquiry',
+        'customer-service': 'customerService',
+        'agent-inquiry': 'agentInquiry'
+      };
+      
+      const eventType = eventTypeMap[id];
+      if (!eventType) return;
+      
+      console.log(`[알림 체크 디버그] id: ${id}, eventType: ${eventType}`);
+      console.log('[알림 체크 디버그] memberNotifications:', alarmSettings.memberNotifications);
+      
+      const settings = alarmSettings.memberNotifications?.[eventType];
+      console.log(`[알림 체크] ${eventType} - notification:`, notification, 'settings:', settings);
+      
+      if (!settings || !settings.enabled) {
+        console.log(`[알람정지] ${eventType} - 설정이 없거나 비활성화됨`);
+        return;
+      }
+      
+      // 알람 재생 조건: requests > 0 (대기 중인 요청이 있을 때)
+      const requestCount = typeof notification.requests === 'string' ? parseInt(notification.requests) : notification.requests;
+      
+      // soundEnabledGlobal이 false면 알람을 시작하지 않고, 이미 재생 중인 알람도 정지
+      if (!soundEnabledGlobal) {
+        if (activeAlarmsRef.current.has(eventType)) {
+          console.log(`[알람정지] ${eventType} - 전역 알람음 OFF`);
+          stopAlarm(eventType);
+        }
+        return;
+      }
+      
+      if (requestCount > 0 && !activeAlarmsRef.current.has(eventType)) {
+        console.log(`[알람시작] ${eventType} - requests: ${requestCount}`);
+        playAlarmSound(eventType, settings.soundFile, settings.interval);
+      }
+      
+      // 알람 정지 조건: requests가 0이 되었을 때만
+      if (requestCount === 0 && activeAlarmsRef.current.has(eventType)) {
+        console.log(`[알람종료] ${eventType} - requests: ${requestCount}`);
+        stopAlarm(eventType);
+      }
+    });
+    // userInteracted와 soundEnabledGlobal 추가하여 ON/OFF 시 알람 재평가
+  }, [notifications, alarmSettings, userInteracted, soundEnabledGlobal, playAlarmSound, stopAlarm]);
+
+  // WebSocket 이벤트 리스너
+  useEffect(() => {
+    if (!socketService) return;
+    
+    // 초기 알림 데이터 수신
+    const handleInitialNotifications = (data) => {
+      console.log('[WebSocket] 초기 알림 데이터 수신:', data);
+      dispatch(initializeNotifications(data));
+    };
+    
+    // 알람 설정 수신 이벤트
+    const handleAlarmSettings = (data) => {
+      console.log('[WebSocket] 알람 설정 수신:', data);
+      setAlarmSettings(data);
+      // 알람 설정을 받은 후 기존 notifications 재평가를 위해 강제 업데이트
+      forceUpdate({});
+    };
+    
+    // 알람 설정 변경 이벤트
+    const handleAlarmSettingsUpdate = (data) => {
+      setAlarmSettings(data);
+    };
+    
+    // 알람 상태 변경 이벤트
+    const handleAlarmStateChange = (data) => {
+      const { eventType, status } = data;
+      if (status === 'stopped') {
+        stopAlarm(eventType);
+      }
+    };
+    
+    // 회원가입 요청 이벤트
+    const handleNewRegistration = (data) => {
+      console.log('[WebSocket] 새 회원가입 요청:', data);
+      dispatch(updateNotificationCount({
+        id: 'member-registration',
+        requests: data.pendingCount  // requests 필드에 pending 수를 설정
+      }));
+    };
+    
+    // 회원가입 상태 변경 이벤트
+    const handleRegistrationStatusChanged = (data) => {
+      console.log('[WebSocket] 회원가입 상태 변경:', data);
+      
+      // pendingCount가 제공되면 즉시 업데이트
+      if (data.pendingCount !== undefined) {
+        dispatch(updateNotificationCount({
+          id: 'member-registration',
+          requests: data.pendingCount,
+          pending: data.waitingCount || 0
+        }));
+        
+        // pending이 0이면 알람 즉시 정지
+        if (data.pendingCount === 0) {
+          stopAlarm('registration');
+        }
+      } else {
+        // pendingCount가 없으면 Socket으로 데이터 요청
+        console.log('[WebSocket] pendingCount 없음, 초기 데이터 재요청');
+        socketService.emit('notifications:request-initial-data');
+      }
+    };
+    
+    socketService.on('notifications:initial-data', handleInitialNotifications);
+    socketService.on('alarms:settings', handleAlarmSettings);
+    socketService.on('alarm:settings:updated', handleAlarmSettingsUpdate);
+    socketService.on('alarm:state:changed', handleAlarmStateChange);
+    socketService.on('registration:new', handleNewRegistration);
+    socketService.on('registration:status:changed', handleRegistrationStatusChanged);
+    socketService.on('registration:approved', handleRegistrationStatusChanged);
+    
+    // 입금문의 이벤트
+    socketService.on('deposit:inquiry:new', (data) => {
+      console.log('[WebSocket] 새 입금문의:', data);
+      dispatch(updateNotificationCount({
+        id: 'deposit-inquiry',
+        requests: data.pendingCount || 1
+      }));
+    });
+    
+    socketService.on('deposit:inquiry:status:changed', (data) => {
+      console.log('[WebSocket] 입금문의 상태 변경:', data);
+      dispatch(updateNotificationCount({
+        id: 'deposit-inquiry',
+        requests: data.pendingCount || 0,
+        pending: data.waitingCount || 0
+      }));
+      
+      if (data.pendingCount === 0) {
+        stopAlarm('depositInquiry');
+      }
+    });
+    
+    // 출금문의 이벤트
+    socketService.on('withdrawal:inquiry:new', (data) => {
+      console.log('[WebSocket] 새 출금문의:', data);
+      dispatch(updateNotificationCount({
+        id: 'withdrawal-inquiry',
+        requests: data.pendingCount || 1
+      }));
+    });
+    
+    socketService.on('withdrawal:inquiry:status:changed', (data) => {
+      console.log('[WebSocket] 출금문의 상태 변경:', data);
+      dispatch(updateNotificationCount({
+        id: 'withdrawal-inquiry',
+        requests: data.pendingCount || 0,
+        pending: data.waitingCount || 0
+      }));
+      
+      if (data.pendingCount === 0) {
+        stopAlarm('withdrawalInquiry');
+      }
+    });
+    
+    // 고객센터 문의 이벤트
+    socketService.on('customer:service:new', (data) => {
+      console.log('[WebSocket] 새 고객센터 문의:', data);
+      dispatch(updateNotificationCount({
+        id: 'customer-service',
+        requests: data.pendingCount || 1
+      }));
+    });
+    
+    socketService.on('customer:service:status:changed', (data) => {
+      console.log('[WebSocket] 고객센터 문의 상태 변경:', data);
+      dispatch(updateNotificationCount({
+        id: 'customer-service',
+        requests: data.pendingCount || 0,
+        pending: data.waitingCount || 0
+      }));
+      
+      if (data.pendingCount === 0) {
+        stopAlarm('customerService');
+      }
+    });
+    
+    // 에이전트 문의 이벤트
+    socketService.on('agent:inquiry:new', (data) => {
+      console.log('[WebSocket] 새 에이전트문의:', data);
+      dispatch(updateNotificationCount({
+        id: 'agent-inquiry',
+        requests: data.pendingCount || 1
+      }));
+    });
+    
+    socketService.on('agent:inquiry:status:changed', (data) => {
+      console.log('[WebSocket] 에이전트 문의 상태 변경:', data);
+      dispatch(updateNotificationCount({
+        id: 'agent-inquiry',
+        requests: data.pendingCount || 0,
+        pending: data.waitingCount || 0
+      }));
+      
+      if (data.pendingCount === 0) {
+        stopAlarm('agentInquiry');
+      }
+    });
+    
+    return () => {
+      socketService.off('notifications:initial-data', handleInitialNotifications);
+      socketService.off('alarms:settings', handleAlarmSettings);
+      socketService.off('alarm:settings:updated', handleAlarmSettingsUpdate);
+      socketService.off('alarm:state:changed', handleAlarmStateChange);
+      socketService.off('registration:new', handleNewRegistration);
+      socketService.off('registration:status:changed', handleRegistrationStatusChanged);
+      socketService.off('registration:approved', handleRegistrationStatusChanged);
+      socketService.off('deposit:inquiry:new');
+      socketService.off('deposit:inquiry:status:changed');
+      socketService.off('withdrawal:inquiry:new');
+      socketService.off('withdrawal:inquiry:status:changed');
+      socketService.off('customer:service:new');
+      socketService.off('customer:service:status:changed');
+      socketService.off('agent:inquiry:new');
+      socketService.off('agent:inquiry:status:changed');
+    };
+  }, [socketService, stopAlarm, dispatch]);
+
+  // 컴포넌트 언마운트 시 모든 알람 정리
+  useEffect(() => {
+    return () => {
+      activeAlarmsRef.current.forEach((alarmState, eventType) => {
+        if (alarmState && alarmState.timerId) {
+          clearTimeout(alarmState.timerId);
+        }
+        const audio = audioRefs.current.get(eventType);
+        if (audio) {
+          audio.onended = null;
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+    };
+  }, []);
+  
+  // 사용자 상호작용 감지
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      if (!userInteracted) {
+        setUserInteracted(true);
+        console.log('사용자 상호작용 감지됨. 알람음 재생이 가능합니다.');
+      }
+    };
+
+    // 다양한 사용자 상호작용 이벤트 감지
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('keydown', handleUserInteraction);
+    document.addEventListener('touchstart', handleUserInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, [userInteracted]);
+
+  // 전역 soundEnabled가 꺼지면 모든 알람 정지
+  useEffect(() => {
+    if (!soundEnabledGlobal) {
+      // 모든 활성 알람 정지
+      const activeEventTypes = Array.from(activeAlarmsRef.current.keys());
+      activeEventTypes.forEach(eventType => {
+        console.log(`[알람 OFF] ${eventType} 알람 정지`);
+        stopAlarm(eventType);
+      });
+    } else {
+      // soundEnabled가 켜지면 알림 상태를 다시 평가
+      // 알림 변경 감지 useEffect가 다시 실행되어 필요한 알람이 재시작됨
+      console.log('[알람 ON] 알람음이 활성화되었습니다.');
+    }
+  }, [soundEnabledGlobal, stopAlarm]);
+
+  // 권한이 없으면 빈 div 반환 (Hook 호출 순서 유지)
+  if (!hasPermission) {
+    return <div style={{ display: 'none' }} />;
+  }
+
+  // 알림 아이콘 매핑
+  const getIcon = (iconName) => {
+    switch (iconName) {
+      case 'PersonIcon':
+        return <AccountCircleOutlinedIcon sx={{ fontSize: 18 }} />;
+      case 'ArrowUpwardIcon':
+        return <FileUploadOutlinedIcon sx={{ fontSize: 18 }} />;
+      case 'ArrowDownwardIcon':
+        return <FileDownloadOutlinedIcon sx={{ fontSize: 18 }} />;
+      case 'SupportAgentIcon':
+        return <SupportAgentOutlinedIcon sx={{ fontSize: 18 }} />;
+      case 'GroupIcon':
+        return <GroupsOutlinedIcon sx={{ fontSize: 18 }} />;
+      case 'WarningIcon':
+        return <WarningOutlinedIcon sx={{ fontSize: 18 }} />;
+      default:
+        return <AccountCircleOutlinedIcon sx={{ fontSize: 18 }} />;
+    }
+  };
+
+  // 알림 클릭 핸들러
+  const handleNotificationClick = (notificationId) => {
+    // 알림 ID에 따른 라우트 매핑
+    const routeMap = {
+      'member-registration': '/agent-management/registration-requests',
+      'deposit-inquiry': '/transactions/deposit',
+      'withdrawal-inquiry': '/transactions/withdrawal',
+      'customer-service': '/customer-service/messages',
+      'agent-inquiry': '/customer-service/messages',
+      'balance-mismatch': '/agent-management/members'
+    };
+
+    const route = routeMap[notificationId];
+    if (route) {
+      navigate(route);
+    }
+  };
+
+  // 최대 6개의 알림만 표시
+  const displayNotifications = Object.values(notifications).slice(0, 6);
+
+  return (
+    <div 
+      className="notification-panel"
+      style={{
+        width: '100%',
+        display: 'block',
+      }}
+    >
+      {/* 사용자 상호작용 안내 (알람음이 활성화되어 있고 상호작용이 없을 때만 표시) */}
+      {!userInteracted && Object.values(alarmSettings.memberNotifications || {}).some(s => s.enabled) && (
+        <div
+          style={{
+            backgroundColor: '#fff3cd',
+            color: '#856404',
+            padding: '8px 12px',
+            fontSize: '12px',
+            textAlign: 'center',
+            borderBottom: '1px solid #ffeaa7',
+          }}
+        >
+          알람음을 활성화하려면 페이지를 클릭하세요.
+        </div>
+      )}
+      
+      {/* 알림 컨테이너 */}
+      <div 
+        style={{ 
+          backgroundColor: 'transparent',
+          padding: isCompact ? '8px 4px' : '10px 8px',
+          width: '100%',
+          display: 'block',
+        }}
+      >
+        <div 
+          style={{ 
+            display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'nowrap',
+            width: '100%',
+            justifyContent: 'space-between',
+            gap: isCompact ? '5px' : '4px',
+            overflow: 'visible',
+            paddingBottom: '0'
+          }}
+          className="notification-container"
+        >
+          {displayNotifications.map((notification) => (
+            <div 
+              key={notification.id}
+              style={{
+                flex: '1 1 0',
+                margin: '0',
+                minWidth: '0',
+                position: 'relative',
+                zIndex: 1102,
+                maxHeight: '120px'
+              }}
+              className={`notification-card ${isCompact ? 'compact' : ''}`}
+            >
+              <div 
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: isCompact ? '4px' : '8px',
+                  overflow: 'hidden',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                  border: '1px solid #EBEDF3',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onClick={() => handleNotificationClick(notification.id)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <div 
+                  style={{ 
+                    padding: isCompact ? '6px 6px' : '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: 'aliceblue',
+                    borderBottom: '1px solid #F3F6F9',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {!isCompact && (
+                    <div 
+                      style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '24px',
+                        height: '14px',
+                        borderRadius: '6px',
+                        backgroundColor: `${notification.color}15`,
+                        color: notification.color,
+                        marginRight: '10px',
+                        flexShrink: 0
+                      }}
+                    >
+                      {getIcon(notification.icon)}
+                    </div>
+                  )}
+                  <div style={{ 
+                    fontWeight: '500', 
+                    fontSize: isCompact ? '11px' : '13px', 
+                    color: '#3F4254',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    width: '100%'
+                  }}>
+                    {notification.title}
+                  </div>
+                </div>
+                
+                <div style={{ 
+                  padding: isCompact ? '8px 8px' : '10px 0px',
+                  display: 'flex',
+                  margin: isCompact ? '0' : '0 10px 0 10px',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    flex: '1 1 0'
+                  }}>
+                    <div style={{ 
+                      fontSize: isCompact ? '9px' : '11px', 
+                      color: '#B5B5C3', 
+                      marginBottom: isCompact ? '2px' : '4px'
+                    }}>
+                      요청
+                    </div>
+                    <div style={{ 
+                      fontSize: isCompact ? '12px' : '16px', 
+                      fontWeight: '600', 
+                      color: notification.requests > 0 ? '#F64E60' : '#B5B5C3',
+                      minWidth: isCompact ? '16px' : '28px',
+                      textAlign: 'center'
+                    }}>
+                      {notification.requests}
+                    </div>
+                  </div>
+                  
+                  <div style={{ 
+                    width: '1px', 
+                    height: isCompact ? '20px' : '24px', 
+                    backgroundColor: '#EBEDF3',
+                    margin: '0 4px',
+                    flexShrink: 0
+                  }}></div>
+                  
+                  <div style={{ 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    flex: '1 1 0'
+                  }}>
+                    <div style={{ 
+                      fontSize: isCompact ? '9px' : '11px', 
+                      color: '#B5B5C3', 
+                      marginBottom: isCompact ? '2px' : '4px'
+                    }}>
+                      대기
+                    </div>
+                    <div style={{ 
+                      fontSize: isCompact ? '12px' : '16px', 
+                      fontWeight: '600', 
+                      color: notification.pending > 0 ? '#FFA800' : '#B5B5C3',
+                      minWidth: isCompact ? '16px' : '28px',
+                      textAlign: 'center'
+                    }}>
+                      {notification.pending}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default NotificationPanel;

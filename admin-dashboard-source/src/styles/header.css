@@ -1,0 +1,345 @@
+/* 헤더 스타일 */
+
+/* 상단 고정 헤더 */
+.header {
+  background-color: var(--paper-color) !important;
+  box-shadow: var(--shadow-light) !important;
+  position: fixed !important;
+  z-index: 1300 !important;
+}
+
+/* 헤더 툴바 */
+.header-toolbar {
+  height: 70px;
+  padding-left: 16px;
+  padding-right: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* 로고 영역 */
+.header-logo {
+  display: flex;
+  align-items: center;
+}
+
+.header-logo-image {
+  height: 40px;
+  width: auto;
+  margin-right: 16px;
+}
+
+.header-logo-text {
+  display: none;
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--primary-color);
+  letter-spacing: 0.5px;
+}
+
+@media (min-width: 600px) {
+  .header-logo-text {
+    display: block;
+  }
+}
+
+/* 햄버거 메뉴 버튼 */
+.menu-button {
+  margin-right: 16px;
+  color: var(--text-primary) !important;
+}
+
+/* 검색창 영역 */
+.search-container {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  background-color: var(--background-color);
+  border-radius: 8px;
+  padding: 6px 16px;
+  width: 40%;
+  transition: width 0.3s ease;
+  border: 1px solid var(--divider-color);
+}
+
+.search-container.expanded {
+  width: 60%;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 8px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.search-icon-button {
+  padding: 8px !important;
+  color: var(--text-secondary) !important;
+}
+
+.search-close-button {
+  padding: 4px !important;
+  color: var(--text-secondary) !important;
+}
+
+/* 헤더 오른쪽 액션 버튼 */
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-button {
+  margin-left: 8px;
+  padding: 8px !important;
+  border-radius: 10px !important;
+  background-color: var(--background-color) !important;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  background-color: var(--divider-color) !important;
+  transition: all 0.2s ease;
+}
+
+/* 알림 영역 */
+.notification-badge .MuiBadge-badge {
+  transition: all 0.3s ease;
+}
+
+.notification-badge.has-unread .MuiBadge-badge {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 프로필 아바타 */
+.avatar-button {
+  margin-left: 8px;
+  padding: 0 !important;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--primary-color);
+  transition: all 0.2s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 8px rgba(var(--primary-rgb, 33, 150, 243), 0.4);
+}
+
+/* 드롭다운 메뉴 */
+.dropdown-menu {
+  margin-top: 12px;
+  padding: 8px 0;
+  border-radius: 12px;
+  min-width: 250px;
+  max-width: 300px;
+}
+
+.menu-item {
+  padding: 8px 16px;
+}
+
+.menu-item:hover {
+  background-color: var(--primary-lighter, rgba(33, 150, 243, 0.04));
+}
+
+.menu-divider {
+  margin: 8px 0;
+}
+
+.menu-icon {
+  min-width: 36px;
+  color: var(--text-secondary);
+}
+
+.logout-menu-item {
+  color: var(--error-color);
+}
+
+.logout-menu-item .menu-icon {
+  color: var(--error-color);
+}
+
+/* 알림 메뉴 */
+.notification-menu {
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--divider-color);
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.mark-all-read {
+  font-size: 0.75rem;
+  text-transform: none;
+  color: var(--primary-color);
+  padding: 4px 8px;
+}
+
+.notification-list {
+  padding: 0;
+}
+
+.notification-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--divider-color);
+  display: flex;
+  align-items: flex-start;
+}
+
+.notification-item.unread {
+  background-color: var(--primary-lighter, rgba(33, 150, 243, 0.04));
+}
+
+.notification-icon {
+  margin-right: 16px;
+  color: var(--primary-color);
+  background-color: var(--primary-lighter, rgba(33, 150, 243, 0.1));
+  padding: 8px;
+  border-radius: 50%;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-message {
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+}
+
+.notification-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.notification-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.view-all-notifications {
+  display: block;
+  text-align: center;
+  padding: 12px;
+  color: var(--primary-color);
+  background-color: rgba(var(--primary-rgb), 0.04);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.view-all-notifications:hover {
+  background-color: rgba(var(--primary-rgb), 0.08);
+}
+
+/* 알림판 아이콘 스타일 */
+.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium .MuiSvgIcon-root[data-testid="NotificationsNoneIcon"],
+.css-b8dcox-MuiButtonBase-root-MuiIconButton-root .MuiSvgIcon-root {
+  color: #3699FF;
+  font-size: 1.3rem;
+  transition: all 0.3s ease;
+}
+
+.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium:hover .MuiSvgIcon-root[data-testid="NotificationsNoneIcon"],
+.css-b8dcox-MuiButtonBase-root-MuiIconButton-root:hover .MuiSvgIcon-root {
+  color: #0073e6;
+  transform: scale(1.1);
+}
+
+/* 알림판 버튼 스타일 */
+.notification-panel-button,
+.css-b8dcox-MuiButtonBase-root-MuiIconButton-root {
+  position: relative;
+  overflow: visible;
+}
+
+/* Material UI IconButton 스타일 오버라이드 */
+.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium,
+.css-b8dcox-MuiButtonBase-root-MuiIconButton-root {
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+  background-color: rgba(126, 130, 153, 0.05);
+}
+
+.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeMedium:hover,
+.css-b8dcox-MuiButtonBase-root-MuiIconButton-root:hover {
+  background-color: rgba(54, 153, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 소리 제어 버튼 스타일 */
+.sound-control-button {
+  color: #7e8299;
+  border-radius: 50%;
+  padding: 8px;
+  margin-left: 8px;
+  background-color: rgba(126, 130, 153, 0.05);
+  transition: all 0.2s ease;
+}
+
+.sound-control-button:hover {
+  color: #3699FF;
+  background-color: rgba(54, 153, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sound-control-button.sound-on {
+  color: #3699FF;
+}
+
+.sound-control-button.sound-off {
+  color: #7e8299;
+}
+
+/* 날짜 시간 표시 영역 */
+.date-time-display {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 500;
+  font-size: 1rem;
+  color: #7e8299;
+  background-color: rgba(126, 130, 153, 0.05);
+  padding: 6px 12px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.date-time-display:hover {
+  background-color: rgba(54, 153, 255, 0.1);
+  color: #3699FF;
+} 

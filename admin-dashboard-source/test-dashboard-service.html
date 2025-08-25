@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Data Service Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-results {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        .warning { border-left-color: #ffc107; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .status { 
+            font-weight: bold; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .loading { background: #fff3cd; color: #856404; }
+        .done { background: #d4edda; color: #155724; }
+        .failed { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>>� Dashboard Data Service Test Suite</h1>
+        <p>Test the minimal API connection service layer independently.</p>
+        
+        <div>
+            <button onclick="testService()">=� Run All Tests</button>
+            <button onclick="testOverview()">=� Test Overview</button>
+            <button onclick="testMetrics()">=e Test User Metrics</button>
+            <button onclick="testStatus()">=� Test System Status</button>
+            <button onclick="testCombined()">= Test Combined</button>
+            <button onclick="clearResults()">>� Clear Results</button>
+        </div>
+
+        <div id="status" class="status loading" style="display: none;">Testing in progress...</div>
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        // Import the dashboard service
+        import { 
+            getDashboardOverview, 
+            getUserMetrics, 
+            getSystemStatus, 
+            getAllDashboardData,
+            SERVICE_INFO
+        } from './src/services/dashboardDataService.js';
+
+        // Make functions globally available
+        window.testService = testService;
+        window.testOverview = testOverview;
+        window.testMetrics = testMetrics;
+        window.testStatus = testStatus;
+        window.testCombined = testCombined;
+        window.clearResults = clearResults;
+
+        // Store service functions globally
+        window.dashboardService = {
+            getDashboardOverview,
+            getUserMetrics,
+            getSystemStatus,
+            getAllDashboardData,
+            SERVICE_INFO
+        };
+
+        function addResult(title, result, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-results ${type}`;
+            resultDiv.innerHTML = `<strong>${title}</strong>\n${JSON.stringify(result, null, 2)}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function setStatus(text, type = 'loading') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = text;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function hideStatus() {
+            document.getElementById('status').style.display = 'none';
+        }
+
+        async function testOverview() {
+            setStatus('Testing Dashboard Overview...');
+            try {
+                const result = await getDashboardOverview();
+                addResult('📊 Dashboard Overview Test', result, result ? 'success' : 'warning');
+                setStatus('Overview test completed', 'done');
+            } catch (error) {
+                addResult('L Dashboard Overview Error', { error: error.message }, 'error');
+                setStatus('Overview test failed', 'failed');
+            }
+        }
+
+        async function testMetrics() {
+            setStatus('Testing User Metrics...');
+            try {
+                const result = await getUserMetrics();
+                addResult('👥 User Metrics Test', result, result ? 'success' : 'warning');
+                setStatus('Metrics test completed', 'done');
+            } catch (error) {
+                addResult('L User Metrics Error', { error: error.message }, 'error');
+                setStatus('Metrics test failed', 'failed');
+            }
+        }
+
+        async function testStatus() {
+            setStatus('Testing System Status...');
+            try {
+                const result = await getSystemStatus();
+                addResult('=� System Status Test', result, result ? 'success' : 'warning');
+                setStatus('Status test completed', 'done');
+            } catch (error) {
+                addResult('L System Status Error', { error: error.message }, 'error');
+                setStatus('Status test failed', 'failed');
+            }
+        }
+
+        async function testCombined() {
+            setStatus('Testing Combined Data Fetch...');
+            try {
+                const result = await getAllDashboardData();
+                addResult('= Combined Data Test', result, result.hasData ? 'success' : 'warning');
+                setStatus('Combined test completed', 'done');
+            } catch (error) {
+                addResult('L Combined Data Error', { error: error.message }, 'error');
+                setStatus('Combined test failed', 'failed');
+            }
+        }
+
+        async function testService() {
+            setStatus('Running Full Test Suite...');
+            addResult('=� Service Information', SERVICE_INFO, 'info');
+            
+            await testOverview();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testMetrics();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testStatus();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testCombined();
+            
+            addResult(' Test Suite Completed', {
+                timestamp: new Date().toISOString(),
+                message: 'All tests have been executed. Check individual results above.'
+            }, 'success');
+            
+            setStatus('All tests completed!', 'done');
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            hideStatus();
+        }
+
+        // Auto-display service info on load
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('✅ Dashboard Data Service Loaded', SERVICE_INFO, 'info');
+            console.log('Dashboard Data Service Test Suite ready!');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+name: Deploy Admin Dashboard to Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-dashboard-source/**'
+      - '.github/workflows/deploy-admin-dashboard.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        working-directory: ./admin-dashboard-source
+        run: npm ci
+          
+      - name: Build production
+        working-directory: ./admin-dashboard-source
+        run: npm run build:prod
+          
+      - name: Deploy to Production Server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          source: "admin-dashboard-source/dist/*"
+          target: "/usr/share/nginx/html"
+          strip_components: 2
+          rm: true
+          
+      - name: Verify deployment
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            echo "Deployment completed"
+            ls -la /usr/share/nginx/html/
+            echo "Testing if index.html exists..."
+            test -f /usr/share/nginx/html/index.html && echo "✓ index.html found" || echo "✗ index.html not found"

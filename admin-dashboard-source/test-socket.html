@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket Test</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Socket Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="logs"></div>
+    <button onclick="requestAgentLevels()">Request Agent Levels</button>
+    
+    <script>
+        const logs = document.getElementById('logs');
+        const status = document.getElementById('status');
+        
+        function log(msg) {
+            const entry = document.createElement('div');
+            entry.textContent = new Date().toISOString() + ' - ' + msg;
+            logs.appendChild(entry);
+            console.log(msg);
+        }
+        
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        log('Token found: ' + (token ? 'Yes' : 'No'));
+        
+        // Connect to Socket.IO
+        const socket = io('http://125.187.89.85:5100', {
+            transports: ['websocket', 'polling'],
+            auth: {
+                token: token
+            }
+        });
+        
+        socket.on('connect', () => {
+            status.textContent = 'Connected: ' + socket.id;
+            log('Connected to Socket.IO');
+            
+            // Send authenticate event
+            socket.emit('authenticate', {
+                token: token,
+                type: 'admin'
+            });
+        });
+        
+        socket.on('authenticated', (data) => {
+            log('Authenticated: ' + JSON.stringify(data));
+        });
+        
+        socket.on('agent-levels-data', (data) => {
+            log('Agent levels data received: ' + JSON.stringify(data));
+        });
+        
+        socket.on('connect_error', (error) => {
+            status.textContent = 'Connection Error';
+            log('Connection error: ' + error.message);
+        });
+        
+        socket.on('disconnect', (reason) => {
+            status.textContent = 'Disconnected';
+            log('Disconnected: ' + reason);
+        });
+        
+        function requestAgentLevels() {
+            log('Requesting agent levels...');
+            socket.emit('request-agent-levels');
+        }
+    </script>
+</body>
+</html>

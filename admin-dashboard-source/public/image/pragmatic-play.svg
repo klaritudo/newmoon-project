@@ -1,0 +1,9 @@
+<svg width="120" height="72" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg">
+  <rect width="120" height="72" rx="6" fill="#FF6B35"/>
+  <text x="60" y="35" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">
+    PRAGMATIC
+  </text>
+  <text x="60" y="50" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">
+    PLAY
+  </text>
+</svg>

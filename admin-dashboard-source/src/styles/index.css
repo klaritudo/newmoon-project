@@ -1,0 +1,242 @@
+:root {
+  /* 기본 색상 변수 */
+  --primary-color: #2196f3;
+  --primary-light: #4dabf5;
+  --primary-dark: #1976d2;
+  --primary-rgb: 33, 150, 243;
+  
+  --secondary-color: #f50057;
+  --secondary-rgb: 245, 0, 87;
+  
+  --success-color: #4caf50;
+  --success-rgb: 76, 175, 80;
+  
+  --error-color: #f44336;
+  --error-rgb: 244, 67, 54;
+  
+  --warning-color: #ff9800;
+  --warning-rgb: 255, 152, 0;
+  
+  --info-color: #2196f3;
+  --info-rgb: 33, 150, 243;
+  
+  /* 배경 색상 */
+  --bg-color: #ffffff;
+  --bg-paper: #ffffff;
+  --bg-default: #f5f5f5;
+  --bg-default-rgb: 245, 245, 245;
+  
+  /* 텍스트 색상 */
+  --text-primary: rgba(0, 0, 0, 0.87);
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --text-disabled: rgba(0, 0, 0, 0.38);
+  
+  /* 구분선 색상 */
+  --divider: rgba(0, 0, 0, 0.12);
+  --divider-rgb: 0, 0, 0;
+  
+  /* 기타 */
+  --border-radius: 4px;
+  --transition-duration: 0.3s;
+  
+  /* 테마 시스템을 위한 추가 변수 */
+  --theme-primary: #1976d2;
+  --theme-primary-dark: #1565c0;
+  --theme-primary-light: #4dabf5;
+  --theme-secondary: #f50057;
+  --theme-background: #ffffff;
+  --theme-paper: #ffffff;
+  --theme-border: #e0e0e0;
+  --theme-button-bg: #f5f5f5;
+  --theme-button-hover: #eeeeee;
+  --theme-text-primary: #000000;
+  --theme-text-secondary: #757575;
+  --theme-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --theme-shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --theme-dialog-title-bg: #ffffff;
+  --theme-dialog-title-text: #1976d2;
+}
+
+/* 다크 모드를 위한 색상 설정 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #121212;
+    --bg-paper: #1e1e1e;
+    --bg-default: #0a0a0a;
+    --bg-default-rgb: 10, 10, 10;
+    
+    --text-primary: rgba(255, 255, 255, 0.87);
+    --text-secondary: rgba(255, 255, 255, 0.6);
+    --text-disabled: rgba(255, 255, 255, 0.38);
+    
+    --divider: rgba(255, 255, 255, 0.12);
+    --divider-rgb: 255, 255, 255;
+  }
+}
+
+/* 사용자가 선택한 다크 테마 */
+[data-theme="dark"] {
+  --bg-color: #121212;
+  --bg-paper: #1e1e1e;
+  --bg-default: #0a0a0a;
+  --bg-default-rgb: 10, 10, 10;
+  
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-disabled: rgba(255, 255, 255, 0.38);
+  
+  --divider: rgba(255, 255, 255, 0.12);
+  --divider-rgb: 255, 255, 255;
+  
+  /* 다크 테마 시스템 변수 */
+  --theme-primary: #90caf9;
+  --theme-primary-dark: #42a5f5;
+  --theme-primary-light: #bbdefb;
+  --theme-secondary: #f48fb1;
+  --theme-background: #121212;
+  --theme-paper: #1e1e1e;
+  --theme-border: #333333;
+  --theme-button-bg: #333333;
+  --theme-button-hover: #444444;
+  --theme-text-primary: #ffffff;
+  --theme-text-secondary: #bbbbbb;
+  --theme-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --theme-shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --theme-dialog-title-bg: #1e1e1e;
+  --theme-dialog-title-text: #90caf9;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-default);
+  color: var(--text-primary);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* 스크롤바 스타일링 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--primary-rgb), 0.2) rgba(var(--divider-rgb), 0.1);
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(var(--divider-rgb), 0.1);
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(var(--primary-rgb), 0.2);
+  border-radius: 10px;
+}
+
+/* 애니메이션 관련 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slideInUp {
+  animation: slideInUp 0.3s ease-out;
+}
+
+/* Material-UI Menu 컴포넌트 스타일 오버라이드 */
+.css-1og58vf-MuiPaper-root-MuiPopover-paper-MuiMenu-paper,
+.css-zct5mn-MuiPaper-root-MuiPopover-paper-MuiMenu-paper,
+.MuiPaper-root.MuiPopover-paper.MuiMenu-paper,
+.MuiPopover-paper,
+.MuiMenu-paper {
+  background-color: rgba(196, 196, 196, 0.5) !important;
+  opacity: 1 !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border-radius: 20px !important;
+  box-shadow: 0px 0px 20px rgba(76, 87, 125, 0.6) !important;
+}
+
+/* Material-UI Menu 내부 요소 스타일 오버라이드 */
+.MuiMenuItem-root,
+.MuiTypography-root,
+.MuiFormControlLabel-root,
+.MuiTabs-root,
+.MuiTab-root {
+  background-color: transparent !important;
+  opacity: 1 !important;
+}
+
+/* Grid 스타일 리셋 - 투명 배경 제외 */
+.MuiGrid-root {
+  opacity: 1 !important;
+}
+
+.ag-labeled.ag-label-align-right.ag-checkbox.ag-input-field.ag-header-select-all {
+  margin-right: 22px;
+  margin-left: 22px;
+}
+
+.ag-header-group-cell {
+  justify-content: center;
+}
+
+/* MuiGrid 컴포넌트의 패딩 제거 */
+.MuiGrid-root.MuiGrid-item.MuiGrid-grid-xs-12.css-1idn90j-MuiGrid-root {
+  /* 패딩 속성 완전히 제거 */
+}
+
+/* Grid 컨테이너 마진 조정 */
+.MuiGrid-root.MuiGrid-container.MuiGrid-spacing-xs-2\.5.css-1dcp0mw-MuiGrid-root {
+  margin: 0;
+  width: 100%;
+}
+
+/* MuiPaper 요소의 패딩 통일 */
+.MuiBox-root.css-0 {
+  padding: 20px !important;
+}
+
+.MuiBox-root.css-s1u7nh {
+  /* padding 제거 */
+  padding: 0 !important;
+}
+
+/* FormControlLabel margin-left 제거 */
+.css-151sgj0-MuiFormControlLabel-root {
+  margin-left: 0 !important;
+}
+
+
+
+
+

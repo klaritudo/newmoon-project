@@ -1,0 +1,259 @@
+/* 글꼴 가져오기 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+/* 기본 스타일 초기화 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+  color: #333;
+  overflow-x: hidden; /* 가로 스크롤 방지 */
+  width: 100%;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* 앱 전체 스타일 */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden; /* 가로 스크롤 방지 */
+  width: 100%;
+  max-width: 100%;
+}
+
+/* CSS 변수 기반 스케일링 시스템 */
+:root {
+  --ui-scale: 1;
+  --table-scale: 1;
+  --font-scale: 1;
+  --spacing-scale: 1;
+  --table-row-height: 52px;
+  --table-padding: 16px;
+}
+
+/* FHD (1920x1080) 및 그 이하 해상도에서 스케일 조정 - 뷰포트 기준 */
+@media screen and (max-width: 1920px) {
+  :root {
+    --ui-scale: 0.60;
+    --table-scale: 0.67; /* 테이블은 더 작게 (0.60 * 0.67 ≈ 0.40) */
+    --font-scale: 1; /* 폰트는 transform으로 처리되므로 별도 조정 불필요 */
+    --spacing-scale: 0.65;
+    --table-row-height: 32px;
+    --table-padding: 8px;
+  }
+}
+
+/* 2K (2560x1440) 해상도에서 스케일 조정 */
+@media screen and (min-width: 1921px) and (max-width: 2560px) {
+  :root {
+    --ui-scale: 0.70;
+    --table-scale: 0.71; /* 테이블 (0.70 * 0.71 ≈ 0.50) */
+    --font-scale: 1;
+    --spacing-scale: 0.75;
+    --table-row-height: 38px;
+    --table-padding: 11px;
+  }
+}
+
+/* 4K (3840x2160) 이상 해상도에서는 원본 크기 유지 */
+@media screen and (min-width: 2561px) {
+  :root {
+    --ui-scale: 1;
+    --table-scale: 1;
+    --font-scale: 1;
+    --spacing-scale: 1;
+    --table-row-height: 52px;
+    --table-padding: 16px;
+  }
+}
+
+/* Transform Scale 기반 전체 UI 스케일링 */
+.app-wrapper {
+  transform: scale(var(--ui-scale));
+  transform-origin: top left;
+  width: calc(100% / var(--ui-scale));
+  min-height: calc(100vh / var(--ui-scale));
+  overflow: visible;
+}
+
+/* 테이블 전용 스케일링 최적화 */
+.MuiTableContainer-root,
+.ag-root-wrapper {
+  transform: scale(var(--table-scale));
+  transform-origin: top left;
+  width: calc(100% / var(--table-scale));
+}
+
+/* 테이블 간격 동적 조정 */
+.MuiTableCell-root {
+  padding: var(--table-padding) !important;
+}
+
+/* 테이블 행 높이 동적 조정 */
+.MuiTableRow-root {
+  height: var(--table-row-height) !important;
+}
+
+/* AG Grid 테이블 행 높이 조정 */
+.ag-row {
+  height: var(--table-row-height) !important;
+}
+
+/* AG Grid 헤더 높이 조정 */
+.ag-header-row {
+  height: calc(var(--table-row-height) * 1.2) !important;
+}
+
+/* 페이지 컨테이너 스타일 */
+.page-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* 유형 셀 스타일 - 칩 형태 */
+.type-chip-agent1 .ag-cell-value,
+.type-chip-agent2 .ag-cell-value,
+.type-chip-agent3 .ag-cell-value,
+.type-chip-agent4 .ag-cell-value,
+.type-chip-member .ag-cell-value,
+.type-chip-other .ag-cell-value {
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-block;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* 에이전트 1차 스타일 */
+.type-chip-agent1 .ag-cell-value {
+  background-color: #3699FF;
+  color: white;
+}
+
+/* 에이전트 2차 스타일 */
+.type-chip-agent2 .ag-cell-value {
+  background-color: #0BB783;
+  color: white;
+}
+
+/* 에이전트 3차 스타일 */
+.type-chip-agent3 .ag-cell-value {
+  background-color: #8950FC;
+  color: white;
+}
+
+/* 기타 에이전트 스타일 */
+.type-chip-agent4 .ag-cell-value {
+  background-color: #F64E60;
+  color: white;
+}
+
+/* 회원 스타일 */
+.type-chip-member .ag-cell-value {
+  background-color: #FFA800;
+  color: white;
+}
+
+/* 기타 유형 스타일 */
+.type-chip-other .ag-cell-value {
+  background-color: #7E8299;
+  color: white;
+}
+
+/* 들여쓰기 레벨에 따른 스타일 */
+.indent-level-0 { padding-left: 0 !important; }
+.indent-level-1 { padding-left: 16px !important; }
+.indent-level-2 { padding-left: 32px !important; }
+.indent-level-3 { padding-left: 48px !important; }
+.indent-level-4 { padding-left: 64px !important; }
+
+/* Material-UI Typography 중앙 정렬 스타일 */
+.mui-style-k554ax-MuiTypography-root,
+.mui-style-oc40gs-MuiTypography-root {
+  text-align: center !important;
+}
+
+/* 테이블 셀 내의 모든 Typography 요소를 중앙 정렬 */
+.MuiTableCell-root .MuiTypography-root {
+  text-align: center !important;
+}
+
+/* 테이블 셀 자체도 중앙 정렬 */
+.MuiTableCell-root {
+  text-align: center !important;
+}
+
+/* MuiContainer 패딩 설정 */
+@media (max-width: 700px) {
+  .MuiContainer-root,
+  .mui-style-cbqchq-MuiContainer-root,
+  [class*="mui-style-"][class*="MuiContainer-root"],
+  [class*="MuiContainer-root"] {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+}
+
+@media (min-width: 701px) {
+  .MuiContainer-root,
+  .mui-style-cbqchq-MuiContainer-root,
+  [class*="mui-style-"][class*="MuiContainer-root"],
+  [class*="MuiContainer-root"] {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}
+
+/* MuiPaper 패딩 설정 */
+@media (max-width: 700px) {
+  .MuiPaper-root,
+  .mui-style-19lmqij-MuiPaper-root,
+  [class*="mui-style-"][class*="MuiPaper-root"],
+  [class*="MuiPaper-root"] {
+    padding: 6px !important;
+  }
+}
+
+/* 특정 페이지에서만 MuiGrid-item padding-top 제거 */
+.no-grid-padding .MuiGrid-item,
+.no-grid-padding .mui-style-zow5z4-MuiGrid-root > .MuiGrid-item,
+.no-grid-padding [class*="mui-style-"][class*="MuiGrid-root"] > .MuiGrid-item {
+  padding-top: 0 !important;
+}

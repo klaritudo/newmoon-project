@@ -1,0 +1,150 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Build Admin Dashboard
+      working-directory: ./admin-dashboard-source
+      run: |
+        npm ci
+        npm run build
+    
+    - name: Build User Page
+      working-directory: ./user-page-source
+      run: |
+        npm ci
+        npm run build
+    
+    - name: Prepare deployment package
+      run: |
+        mkdir -p deploy-package
+        cp -r admin-dashboard-source/dist deploy-package/admin-dashboard
+        cp -r user-page-source/build deploy-package/user-page
+        cp -r admin-api-source deploy-package/admin-api
+        cp -r user-api-source deploy-package/user-api
+        cp -r docker deploy-package/
+        cp -r nginx deploy-package/
+        
+        # Create version file
+        echo "VERSION=$(date +'%Y%m%d-%H%M%S')" > deploy-package/version.txt
+        echo "COMMIT=${GITHUB_SHA}" >> deploy-package/version.txt
+        
+        # Package everything
+        tar -czf deploy-package.tar.gz deploy-package/
+    
+    - name: Deploy to Staging Server
+      if: github.event.inputs.environment == 'staging' || github.ref == 'refs/heads/develop'
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        source: "deploy-package.tar.gz"
+        target: "/tmp/"
+    
+    - name: Execute deployment on Staging
+      if: github.event.inputs.environment == 'staging' || github.ref == 'refs/heads/develop'
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        script: |
+          cd /tmp
+          tar -xzf deploy-package.tar.gz
+          cd deploy-package
+          
+          # Backup current deployment
+          if [ -d /var/www/staging ]; then
+            sudo cp -r /var/www/staging /var/www/staging-backup-$(date +'%Y%m%d-%H%M%S')
+          fi
+          
+          # Deploy new version
+          sudo cp -r admin-dashboard /var/www/staging/admin
+          sudo cp -r user-page /var/www/staging/user
+          sudo cp -r admin-api /var/www/staging/admin-api
+          sudo cp -r user-api /var/www/staging/user-api
+          
+          # Restart services
+          sudo systemctl restart nginx
+          pm2 restart all
+          
+          # Health check
+          curl -f http://localhost/health || exit 1
+    
+    - name: Deploy to Production Server
+      if: github.event.inputs.environment == 'production' && github.ref == 'refs/heads/main'
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USER }}
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        source: "deploy-package.tar.gz"
+        target: "/tmp/"
+    
+    - name: Execute deployment on Production
+      if: github.event.inputs.environment == 'production' && github.ref == 'refs/heads/main'
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USER }}
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        script: |
+          cd /tmp
+          tar -xzf deploy-package.tar.gz
+          cd deploy-package
+          
+          # Backup current deployment
+          if [ -d /var/www/production ]; then
+            sudo cp -r /var/www/production /var/www/production-backup-$(date +'%Y%m%d-%H%M%S')
+          fi
+          
+          # Deploy with Docker Compose
+          sudo cp -r docker/* /var/www/production/
+          cd /var/www/production
+          
+          # Update images and restart
+          sudo docker-compose down
+          sudo docker-compose build --no-cache
+          sudo docker-compose up -d
+          
+          # Wait for services to be ready
+          sleep 30
+          
+          # Health check
+          curl -f http://localhost/health || exit 1
+    
+    - name: Notify deployment status
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: |
+          Deployment to ${{ github.event.inputs.environment || 'staging' }} ${{ job.status }}
+          Commit: ${{ github.sha }}
+          Author: ${{ github.actor }}
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if_mention: failure

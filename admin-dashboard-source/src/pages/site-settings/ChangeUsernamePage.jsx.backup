@@ -1,0 +1,529 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Box, Paper, Typography, useTheme } from '@mui/material';
+import { 
+  PageContainer,
+  PageHeader,
+  BaseTable,
+  TableHeader,
+  TableFilterAndPagination,
+  ColumnVisibilityDialog,
+  TableResizeHandle,
+  TableHeightSetting,
+  TableDebugInfo
+} from '../../components/baseTemplate/components';
+import { 
+  useTableFilterAndPagination, 
+  useTableHeader, 
+  useTable,
+  useTableColumnDrag,
+  useColumnVisibility,
+  useTableAutoHeight,
+  useTableResize,
+  useTableHeaderFixed,
+  useTableData
+} from '../../components/baseTemplate/hooks';
+import { generateOnlineChangeableUsers } from '../agent-management/data/usernameChangeHistoryData';
+import { openChangeDialog, setOnlineChangeableUsers, closeChangeDialog } from '../../features/usernameChange/usernameChangeSlice';
+import UsernameChangeDialog from '../../components/dialogs/UsernameChangeDialog';
+import { changeUsernameColumns } from './data/changeUsernameColumns';
+
+const ChangeUsernamePage = () => {
+  const theme = useTheme();
+  const dispatch = useDispatch();
+  const { changeDialog } = useSelector(state => state.usernameChange);
+  
+  // 온라인 변경 가능 사용자 데이터 직접 생성
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // 페이지네이션은 useTableFilterAndPagination 훅에서 처리
+
+  useEffect(() => {
+    try {
+      const onlineUsers = generateOnlineChangeableUsers(50);
+      setData(onlineUsers);
+      setIsLoading(false);
+    } catch (err) {
+      setError(err);
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 페이지네이션 직접 제어 로직
+  const [currentPage, setCurrentPage] = useState(0);
+  const [currentRowsPerPage, setCurrentRowsPerPage] = useState(25);
+
+  // 아이디바꿔주기 버튼 클릭 핸들러
+  const handleChangeUsername = (userId, agentId) => {
+    dispatch(openChangeDialog({ userId, agentId }));
+  };
+
+  // 컬럼 정의에 onClick 핸들러 추가
+  const columnsWithHandlers = useMemo(() => {
+    return changeUsernameColumns.map(column => {
+      if (column.id === 'actions') {
+        return {
+          ...column,
+          onClick: (row) => handleChangeUsername(row.userId, row.agentId)
+        };
+      }
+      return column;
+    });
+  }, []);
+
+  // 컬럼 드래그 앤 드롭 관련 훅 사용
+  const {
+    columns,
+    dragInfo,
+    pinnedColumns,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop,
+    updateColumns,
+    isColumnPinned,
+    toggleColumnPin,
+    clearAllPinnedColumns,
+    setDefaultPinnedColumns
+  } = useTableColumnDrag({
+    initialColumns: columnsWithHandlers,
+      {
+        id: 'no',
+        label: 'No.',
+        width: 60,
+        sortable: false,
+        filterable: false,
+        align: 'center',
+        type: 'number'
+      },
+      {
+        id: 'userId',
+        label: '아이디',
+        width: 120,
+        sortable: true,
+        filterable: true
+      },
+      {
+        id: 'nickname',
+        label: '닉네임',
+        width: 120,
+        sortable: true,
+        filterable: true
+      },
+      {
+        id: 'agentId',
+        label: '에이전트',
+        width: 100,
+        sortable: true,
+        filterable: true
+      },
+      {
+        id: 'level',
+        label: '레벨',
+        width: 80,
+        sortable: true,
+        filterable: true,
+        render: (value) => (
+          <Chip label={value} size="small" variant="outlined" />
+        )
+      },
+      {
+        id: 'ipAddress',
+        label: 'IP주소',
+        width: 120,
+        sortable: true,
+        filterable: true
+      },
+      {
+        id: 'device',
+        label: '접속기기',
+        width: 80,
+        sortable: true,
+        filterable: true,
+        render: (value) => (
+          <Chip label={value} size="small" variant="outlined" />
+        )
+      },
+      {
+        id: 'gameStatus',
+        label: '게임상태',
+        width: 100,
+        sortable: true,
+        filterable: true,
+        render: (value) => (
+          <Chip 
+            label={value}
+            size="small"
+            color={value === '로비대기' ? 'success' : 'warning'}
+            variant="outlined"
+          />
+        )
+      },
+      {
+        id: 'runningTimeFormatted',
+        label: '게임접속 러닝타임',
+        width: 150,
+        sortable: false,
+        filterable: false,
+        render: (value, row) => {
+          // 실시간으로 러닝타임 계산
+          const loginTime = new Date(row.loginTime);
+          const now = new Date();
+          const runningSeconds = Math.floor((now - loginTime) / 1000);
+          
+          const hours = Math.floor(runningSeconds / 3600);
+          const minutes = Math.floor((runningSeconds % 3600) / 60);
+          const seconds = runningSeconds % 60;
+          
+          let formattedTime;
+          if (hours > 0) {
+            formattedTime = `${hours}시간 ${minutes}분`;
+          } else if (minutes > 0) {
+            formattedTime = `${minutes}분 ${seconds}초`;
+          } else {
+            formattedTime = `${seconds}초`;
+          }
+          
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Timer fontSize="small" color="action" />
+              <span>{formattedTime}</span>
+            </Box>
+          );
+        }
+      },
+      {
+        id: 'actions',
+        label: '액션',
+        width: 120,
+        sortable: false,
+        filterable: false,
+        align: 'center',
+        type: 'button',
+        buttons: [
+          {
+            label: '아이디바꿔주기',
+            color: 'primary',
+            variant: 'contained',
+            size: 'small',
+            icon: <SwapHoriz />,
+            onClick: (row) => handleChangeUsername(row.userId, row.agentId)
+          }
+        ]
+      }
+    ],
+    tableId: 'username_change_table',
+    onColumnOrderChange: () => {
+      // 컬럼 순서 변경 시 처리
+    }
+  });
+
+  // 컬럼 표시옵션 관련 훅 사용
+  const {
+    columnVisibility,
+    visibleColumns,
+    hiddenColumnsCount,
+    toggleableColumns,
+    toggleColumnVisibility,
+    showAllColumns,
+    resetToDefault
+  } = useColumnVisibility(columns, {
+    defaultHiddenColumns: [],
+    alwaysVisibleColumns: ['no', 'userId', 'actions'],
+    tableId: 'username_change_table'
+  });
+
+  // 컬럼 고정 초기화 (최초 1회만)
+  const [isPinnedInitialized, setIsPinnedInitialized] = useState(false);
+  useEffect(() => {
+    if (columns.length > 0 && !isPinnedInitialized && setDefaultPinnedColumns) {
+      // 기본 고정 컬럼 설정
+      const timer = setTimeout(() => {
+        setDefaultPinnedColumns();
+        setIsPinnedInitialized(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [columns, isPinnedInitialized, setDefaultPinnedColumns]);
+
+  // 표시옵션 다이얼로그 상태
+  const [displayOptionsAnchor, setDisplayOptionsAnchor] = useState(null);
+  const isDisplayOptionsOpen = Boolean(displayOptionsAnchor);
+
+  // 표시옵션 버튼 클릭 핸들러
+  const handleDisplayOptionsClick = useCallback((anchorElement) => {
+    setDisplayOptionsAnchor(anchorElement);
+  }, []);
+
+  // 표시옵션 다이얼로그 닫기 핸들러
+  const handleDisplayOptionsClose = useCallback(() => {
+    setDisplayOptionsAnchor(null);
+  }, []);
+
+  // 드래그 앤 드롭 활성화
+  const draggableColumns = true;
+
+  // 드래그 관련 핸들러 모음
+  const dragHandlers = {
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop
+  };
+
+
+
+  // 페이지 로드 시 온라인 변경 가능한 사용자 목록 업데이트
+  useEffect(() => {
+    if (data) {
+      dispatch(setOnlineChangeableUsers(data));
+    }
+  }, [data, dispatch]);
+
+  // 테이블 필터 및 페이지네이션 훅
+  const {
+    activeFilters,
+    handleFilterChange,
+    page,
+    handlePageChange,
+    handleRowsPerPageChange,
+    filteredData,
+    displayData
+  } = useTableFilterAndPagination({
+    columns: visibleColumns,
+    data: data || [],
+    defaultRowsPerPage: 25
+  });
+
+  // 테이블 헤더 훅
+  const {
+    searchText,
+    sequentialPageNumbers,
+    hasPinnedColumns,
+    isGridReady,
+    handleSearchChange,
+    togglePageNumberMode,
+    toggleColumnPin: headerToggleColumnPin,
+    setGridReady,
+    setHasPinnedColumns
+  } = useTableHeader({
+    initialTotalItems: data?.length || 0,
+    tableId: 'usernameChange',
+    onSearch: () => {
+      if (page !== 0) {
+        handlePageChange(0);
+      }
+    },
+    onToggleColumnPin: (hasPinned) => {
+      if (hasPinned) {
+        setDefaultPinnedColumns();
+      } else {
+        clearAllPinnedColumns();
+      }
+    }
+  });
+
+  // useTable 훅 사용 (체크박스 관련 기능)
+  const {
+    checkedItems: tableCheckedItems,
+    sortConfig: tableSortConfig,
+    expandedRows: tableExpandedRows,
+    allChecked: tableAllChecked,
+    handleSort: tableHandleSort,
+    handleCheck: tableHandleCheck,
+    handleToggleAll: tableHandleToggleAll,
+    handleToggleExpand: tableHandleToggleExpand
+  } = useTable({
+    data: data,
+    initialSort: { key: null, direction: 'asc' },
+    initialCheckedItems: {},
+    initialExpandedRows: {},
+    indentMode: false,
+    page: currentPage,
+    rowsPerPage: currentRowsPerPage
+  });
+
+  // 그리드 준비 상태로 설정
+  useEffect(() => {
+    setGridReady(true);
+  }, [setGridReady]);
+
+  // pinnedColumns 상태 변경 감지
+  useEffect(() => {
+    const hasPinned = pinnedColumns && pinnedColumns.length > 0;
+    setHasPinnedColumns(hasPinned);
+  }, [pinnedColumns, setHasPinnedColumns]);
+
+  // 러닝타임을 실시간으로 업데이트하기 위한 트리거
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      forceUpdate(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+
+  // 필터 props 구성
+  const filterProps = {
+    activeFilters,
+    handleFilterChange,
+    filterOptions: []
+  };
+
+  // 페이지 변경 핸들러
+  const handlePageChangeWithLog = useCallback((event, newPageIndex) => {
+    let pageIndex = newPageIndex;
+    
+    if (typeof event === 'number' && newPageIndex === undefined) {
+      pageIndex = event;
+    }
+    
+    setCurrentPage(pageIndex);
+    handlePageChange(pageIndex);
+  }, [handlePageChange]);
+
+  // 페이지당 행 수 변경 핸들러
+  const handleRowsPerPageChangeWithLog = useCallback((event) => {
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setCurrentRowsPerPage(newRowsPerPage);
+    setCurrentPage(0);
+    handleRowsPerPageChange(event);
+  }, [handleRowsPerPageChange]);
+  
+  // 표시 데이터 (페이지네이션은 BaseTable에서 처리)
+  const visibleData = useMemo(() => {
+    const sourceData = displayData || data || [];
+    const dataWithNo = sourceData.map((item, index) => ({
+      ...item,
+      no: index + 1
+    }));
+    return dataWithNo;
+  }, [displayData, data]);
+
+  // 페이지네이션 props 구성
+  const paginationProps = {
+    count: filteredData?.length || data?.length || 0,
+    page: currentPage,
+    rowsPerPage: currentRowsPerPage,
+    onPageChange: handlePageChangeWithLog,
+    onRowsPerPageChange: handleRowsPerPageChangeWithLog
+  };
+
+  // visibleColumns 그대로 사용
+  const finalColumns = visibleColumns;
+  
+  // 디버깅: 실제 전달되는 컬럼 확인
+  useEffect(() => {
+    console.log('ChangeUsernamePage - columns:', columns);
+    console.log('ChangeUsernamePage - visibleColumns:', visibleColumns);
+    console.log('ChangeUsernamePage - finalColumns:', finalColumns);
+  }, [columns, visibleColumns, finalColumns]);
+
+  return (
+    <PageContainer>
+      <PageHeader
+        title="아이디바꿔주기"
+        subtitle="아이디바꿔주기 기능이 활성화된 접속 중인 회원의 아이디를 변경할 수 있습니다."
+        onDisplayOptionsClick={handleDisplayOptionsClick}
+      />
+      
+      {/* 컬럼 표시옵션 다이얼로그 */}
+      <ColumnVisibilityDialog
+        anchorEl={displayOptionsAnchor}
+        open={isDisplayOptionsOpen}
+        onClose={handleDisplayOptionsClose}
+        toggleableColumns={toggleableColumns}
+        columnVisibility={columnVisibility}
+        onToggleColumn={toggleColumnVisibility}
+        onShowAll={showAllColumns}
+        onReset={resetToDefault}
+        hiddenColumnsCount={hiddenColumnsCount}
+        menuWidth="350px"
+      />
+      
+      <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
+        
+        {/* 테이블 헤더 컴포넌트 */}
+        <TableHeader
+        title="접속 중인 변경 가능 회원"
+        searchText={searchText}
+        onSearchChange={handleSearchChange}
+        totalItems={filteredData?.length || data?.length || 0}
+        showColumnToggle={true}
+        columns={visibleColumns}
+        columnVisibility={columnVisibility}
+        onColumnVisibilityChange={toggleColumnVisibility}
+        showDensityToggle={true}
+        sequentialPageNumbers={sequentialPageNumbers}
+        togglePageNumberMode={togglePageNumberMode}
+        hasPinnedColumns={hasPinnedColumns}
+        isGridReady={isGridReady}
+        toggleColumnPin={headerToggleColumnPin}
+          sx={{ mb: 2 }}
+        />
+
+        <Box sx={{ width: '100%' }}>
+          <TableFilterAndPagination
+            filterProps={filterProps}
+            paginationProps={paginationProps}
+          />
+        </Box>
+        
+        {/* 테이블 콘텐츠 영역 */}
+        <Box 
+          sx={{ 
+            width: '100%', 
+            mt: 2
+          }}
+        >
+          <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+            현재 페이지: {currentPage + 1} / {Math.ceil((filteredData?.length || data?.length || 0) / currentRowsPerPage)} (페이지당 {currentRowsPerPage}행)
+            {' - 컬럼을 드래그하여 순서를 변경할 수 있습니다.'}
+          </Typography>
+          <BaseTable
+            columns={finalColumns}
+            data={visibleData}
+            checkable={false}
+            hierarchical={false}
+            indentMode={false}
+            checkedItems={tableCheckedItems}
+            expandedRows={tableExpandedRows}
+            allChecked={tableAllChecked}
+            onCheck={tableHandleCheck}
+            onToggleAll={tableHandleToggleAll}
+            onToggleExpand={tableHandleToggleExpand}
+            onSort={tableHandleSort}
+            sortConfig={tableSortConfig}
+            page={currentPage}
+            rowsPerPage={currentRowsPerPage}
+            totalCount={data?.length || 0}
+            sequentialPageNumbers={sequentialPageNumbers}
+            draggableColumns={draggableColumns}
+            onColumnOrderChange={updateColumns}
+            dragHandlers={dragHandlers}
+            dragInfo={dragInfo}
+            fixedHeader={true}
+            maxHeight="500px"
+            pinnedColumns={pinnedColumns}
+          />
+        </Box>
+      </Paper>
+      
+      {/* 아이디바꿔주기 다이얼로그 */}
+      {changeDialog.open && (
+        <UsernameChangeDialog
+          open={changeDialog.open}
+          userId={changeDialog.userId}
+          agentId={changeDialog.agentId}
+          onClose={() => dispatch(closeChangeDialog())}
+        />
+      )}
+    </PageContainer>
+  );
+};
+
+export default ChangeUsernamePage;

@@ -1,0 +1,141 @@
+name: Deploy to Production (Real)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Build Admin Dashboard
+      run: |
+        echo "📦 Building Admin Dashboard..."
+        cd admin-dashboard-source
+        npm ci
+        npm run build
+        echo "✅ Admin Dashboard build complete"
+    
+    - name: Build User Page
+      run: |
+        echo "📦 Building User Page..."
+        cd user-page-source
+        npm ci
+        npm run build
+        echo "✅ User Page build complete"
+    
+    - name: Prepare deployment package
+      run: |
+        echo "📦 Preparing deployment package..."
+        mkdir -p deploy-package
+        
+        # Copy Admin Dashboard dist
+        if [ -d "admin-dashboard-source/dist" ]; then
+          cp -r admin-dashboard-source/dist deploy-package/admin-dist
+          echo "✅ Admin Dashboard dist copied"
+        fi
+        
+        # Copy User Page dist
+        if [ -d "user-page-source/dist" ]; then
+          cp -r user-page-source/dist deploy-package/user-dist
+          echo "✅ User Page dist copied"
+        fi
+        
+        # Create deployment info file
+        echo "Deployment Date: $(date)" > deploy-package/deployment-info.txt
+        echo "Commit: ${{ github.sha }}" >> deploy-package/deployment-info.txt
+        
+        # Create tarball
+        tar -czf deployment.tar.gz deploy-package/
+        echo "✅ Deployment package created"
+    
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.PRODUCTION_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+    
+    - name: Transfer files to production
+      run: |
+        echo "📤 Transferring files to production server..."
+        
+        # Copy deployment package to production server
+        scp -i ~/.ssh/deploy_key \
+          deployment.tar.gz \
+          ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/home/${{ secrets.PRODUCTION_USER }}/
+        
+        echo "✅ Files transferred successfully"
+    
+    - name: Deploy on production server
+      run: |
+        echo "🚀 Deploying on production server..."
+        
+        ssh -i ~/.ssh/deploy_key \
+          ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'ENDSSH'
+          
+          # Extract deployment package
+          echo "Extracting deployment package..."
+          tar -xzf deployment.tar.gz
+          
+          # Backup current dist
+          if [ -d "dist" ]; then
+            echo "Backing up current dist..."
+            mv dist dist-backup-$(date +%Y%m%d-%H%M%S)
+          fi
+          
+          # Deploy Admin Dashboard
+          if [ -d "deploy-package/admin-dist" ]; then
+            echo "Deploying Admin Dashboard..."
+            mkdir -p dist
+            cp -r deploy-package/admin-dist/* dist/
+          fi
+          
+          # Deploy User Page to app/frontend if needed
+          if [ -d "deploy-package/user-dist" ] && [ -d "app/frontend" ]; then
+            echo "Deploying User Page..."
+            cp -r deploy-package/user-dist/* app/frontend/dist/ 2>/dev/null || true
+          fi
+          
+          # Clean up
+          rm -rf deploy-package deployment.tar.gz
+          
+          # Reload Nginx
+          echo "Reloading Nginx..."
+          sudo nginx -t && sudo nginx -s reload
+          
+          echo "✅ Deployment complete!"
+          echo "Deployment completed at $(date)" >> deployment.log
+          
+          # Keep only last 5 backups
+          ls -dt dist-backup-* 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null || true
+          
+        ENDSSH
+        
+        echo "✅ Production deployment successful!"
+    
+    - name: Health check
+      run: |
+        echo "🔍 Running health check..."
+        sleep 5
+        
+        # Check if site is accessible
+        response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.PRODUCTION_HOST }})
+        
+        if [ "$response" = "200" ] || [ "$response" = "301" ] || [ "$response" = "302" ]; then
+          echo "✅ Site is accessible (HTTP $response)"
+        else
+          echo "⚠️ Site returned HTTP $response"
+          exit 1
+        fi

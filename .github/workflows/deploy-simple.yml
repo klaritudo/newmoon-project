@@ -1,0 +1,46 @@
+# 간단한 배포 워크플로우 (Self-hosted Runner 사용)
+name: Simple Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # GitHub 제공 Runner 사용
+    
+    steps:
+    - name: 체크아웃
+      uses: actions/checkout@v3
+    
+    - name: Node.js 설정
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Admin Dashboard 빌드
+      run: |
+        cd admin-dashboard-source
+        npm ci
+        npm run build
+        echo "✅ Admin Dashboard 빌드 완료"
+    
+    - name: User Page 빌드
+      run: |
+        cd user-page-source
+        npm ci
+        npm run build
+        echo "✅ User Page 빌드 완료"
+    
+    - name: PM2 재시작
+      run: |
+        pm2 restart all
+        pm2 save
+        echo "✅ 서비스 재시작 완료"
+    
+    - name: 헬스체크
+      run: |
+        sleep 10
+        ./scripts/health-check.sh || echo "⚠️ 헬스체크 실패"

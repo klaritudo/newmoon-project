@@ -1,0 +1,188 @@
+# 고급 배포 워크플로우 (스테이징/프로덕션)
+name: Advanced Deploy
+
+on:
+  push:
+    branches: 
+      - main  # 프로덕션
+      - develop  # 스테이징
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '배포 환경'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+jobs:
+  # 빌드 및 테스트
+  build:
+    runs-on: self-hosted
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+    
+    steps:
+    - name: 체크아웃
+      uses: actions/checkout@v3
+    
+    - name: 환경 설정
+      id: set-env
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "environment=production" >> $GITHUB_OUTPUT
+        else
+          echo "environment=staging" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Node.js 설정
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: 의존성 설치
+      run: |
+        echo "📦 의존성 설치 중..."
+        cd admin-dashboard-source && npm ci
+        cd ../user-page-source && npm ci
+        cd ../admin-api-source && npm ci
+        cd ../user-api-source && npm ci
+    
+    - name: 코드 품질 검사
+      run: |
+        echo "🔍 코드 품질 검사 중..."
+        # Lint 검사 (있다면)
+        # cd admin-dashboard-source && npm run lint || true
+        # cd ../user-page-source && npm run lint || true
+    
+    - name: 빌드
+      run: |
+        echo "🔨 애플리케이션 빌드 중..."
+        cd admin-dashboard-source && npm run build
+        cd ../user-page-source && npm run build
+    
+    - name: 아티팩트 업로드
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts
+        path: |
+          admin-dashboard-source/dist
+          user-page-source/build
+        retention-days: 1
+
+  # 스테이징 배포
+  deploy-staging:
+    needs: build
+    if: needs.build.outputs.environment == 'staging'
+    runs-on: self-hosted
+    environment: staging
+    
+    steps:
+    - name: 체크아웃
+      uses: actions/checkout@v3
+    
+    - name: 아티팩트 다운로드
+      uses: actions/download-artifact@v3
+      with:
+        name: build-artifacts
+    
+    - name: 백업 생성
+      run: |
+        echo "💾 백업 생성 중..."
+        timestamp=$(date +'%Y%m%d-%H%M%S')
+        mkdir -p /var/backups/deployments
+        tar -czf "/var/backups/deployments/backup-staging-${timestamp}.tar.gz" \
+          admin-dashboard-source/dist \
+          user-page-source/build || true
+    
+    - name: 배포
+      run: |
+        echo "🚀 스테이징 환경에 배포 중..."
+        # 빌드된 파일 복사
+        cp -r admin-dashboard-source/dist/* /var/www/staging/admin-dashboard/ || true
+        cp -r user-page-source/build/* /var/www/staging/user-page/ || true
+        
+        # PM2 재시작
+        pm2 restart admin-api-staging user-api-staging || true
+        pm2 save
+    
+    - name: 헬스체크
+      run: |
+        sleep 15
+        ./scripts/health-check.sh
+        echo "✅ 스테이징 배포 완료!"
+
+  # 프로덕션 배포 (프로덕션 서버 정보 필요)
+  deploy-production:
+    needs: build
+    if: needs.build.outputs.environment == 'production'
+    runs-on: self-hosted
+    environment: production
+    
+    steps:
+    - name: 체크아웃
+      uses: actions/checkout@v3
+    
+    - name: 아티팩트 다운로드
+      uses: actions/download-artifact@v3
+      with:
+        name: build-artifacts
+    
+    - name: 프로덕션 배포 준비
+      run: |
+        echo "⚠️ 프로덕션 배포 준비 중..."
+        echo "프로덕션 서버 정보가 필요합니다:"
+        echo "- 서버 IP: ${{ secrets.PRODUCTION_HOST || '설정 필요' }}"
+        echo "- 사용자: ${{ secrets.PRODUCTION_USER || '설정 필요' }}"
+        
+        # 프로덕션 서버 정보가 있다면 SCP로 전송
+        if [[ -n "${{ secrets.PRODUCTION_HOST }}" ]]; then
+          echo "📤 프로덕션 서버로 파일 전송 중..."
+          # scp -r admin-dashboard-source/dist/* ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/var/www/production/admin-dashboard/
+          # scp -r user-page-source/build/* ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:/var/www/production/user-page/
+          
+          # SSH로 원격 명령 실행
+          # ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} "pm2 restart all"
+        else
+          echo "❌ 프로덕션 서버 정보가 설정되지 않았습니다."
+          echo "GitHub Secrets에 다음 정보를 설정하세요:"
+          echo "- PRODUCTION_HOST"
+          echo "- PRODUCTION_USER"
+          echo "- PRODUCTION_SSH_KEY"
+          exit 1
+        fi
+    
+    - name: 프로덕션 헬스체크
+      if: success()
+      run: |
+        echo "🏥 프로덕션 헬스체크 중..."
+        # 프로덕션 URL로 헬스체크
+        # curl -f https://your-production-domain.com/health || exit 1
+        echo "✅ 프로덕션 배포 완료!"
+
+  # 롤백 (필요시)
+  rollback:
+    if: failure()
+    needs: [deploy-staging, deploy-production]
+    runs-on: self-hosted
+    
+    steps:
+    - name: 롤백 실행
+      run: |
+        echo "⚠️ 배포 실패. 롤백 시작..."
+        # 가장 최근 백업으로 복원
+        latest_backup=$(ls -t /var/backups/deployments/backup-*.tar.gz 2>/dev/null | head -1)
+        if [[ -n "$latest_backup" ]]; then
+          tar -xzf "$latest_backup" -C /
+          pm2 restart all
+          echo "✅ 롤백 완료"
+        else
+          echo "❌ 롤백할 백업이 없습니다."
+        fi

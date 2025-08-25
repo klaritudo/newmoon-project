@@ -1,0 +1,236 @@
+/* 다이얼로그 타이틀 스타일 */
+.dialog-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background-color: #3699FF !important;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dialog-title-text {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #ffffff;
+}
+
+.close-button {
+  margin-right: -12px;
+  color: #ffffff;
+}
+
+/* 다이얼로그 콘텐츠 스타일 */
+.dialog-content {
+  padding: 16px 24px !important;
+  overflow-x: hidden;
+}
+
+/* 섹션 헤더 스타일 */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title-text {
+  font-weight: 600;
+  color: #333;
+}
+
+.bulk-creation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-creation-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #666;
+}
+
+/* 폼 섹션 스타일 */
+.form-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.form-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-section-title-text {
+  font-weight: 600;
+  color: #333;
+}
+
+/* 입력 필드 아이콘 스타일 */
+.field-icon {
+  color: rgba(0, 0, 0, 0.54);
+  font-size: 1.2rem;
+  margin-right: 10px !important;
+  transition: color 200ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+}
+
+/* 입력 필드 포커스 시 아이콘 색상 변경 */
+.MuiInputBase-root.Mui-focused .field-icon {
+  color: #1976d2;
+}
+
+/* 에러 상태일 때 아이콘 색상 */
+.MuiInputBase-root.Mui-error .field-icon {
+  color: #d32f2f;
+}
+
+.parent-chip {
+  font-size: 0.75rem;
+  height: 24px;
+}
+
+/* URL 입력 컨테이너 스타일 */
+.url-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.url-add-button {
+  flex-shrink: 0;
+}
+
+/* 일괄 입력 컨테이너 스타일 */
+.bulk-input-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.bulk-input-checkbox {
+  margin-right: 0;
+}
+
+/* 나중에 입력 체크박스 스타일 */
+.later-input-checkbox {
+  margin-right: 0;
+  padding-left: 10px;
+}
+
+/* 액션 버튼 스타일 */
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.submit-button {
+  min-width: 100px;
+}
+
+.cancel-button {
+  min-width: 100px;
+}
+
+/* 메모 필드 스타일 */
+.memo-field {
+  margin-top: 16px;
+}
+
+/* 베팅 한도 섹션 스타일 */
+.betting-limit-section {
+  margin-top: 16px;
+}
+
+/* 반응형 조정 */
+@media (max-width: 600px) {
+  .dialog-content {
+    padding: 12px 16px !important;
+  }
+  
+  .form-section {
+    padding: 12px;
+  }
+  
+  .section-header,
+  .form-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .bulk-creation-toggle,
+  .parent-chip {
+    margin-top: 8px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .submit-button,
+  .cancel-button {
+    width: 100%;
+  }
+}
+
+/* 커스텀 토글 스위치 스타일 */
+.MuiSwitch-root {
+  width: 42px !important;
+  height: 25px !important;
+  padding: 0 !important;
+  margin-right: 15px !important;
+}
+
+.MuiSwitch-track {
+  background-color: #db5d5d !important;
+  height: 25px !important;
+}
+
+.MuiSwitch-switchBase.Mui-checked+.MuiSwitch-track {
+  background-color: #3699FF !important;
+}
+
+.MuiSwitch-switchBase {
+  padding: 2.5px !important;
+  margin: 0 !important;
+  top: 0 !important;
+}
+
+.MuiSwitch-thumb {
+  width: 20px !important;
+  height: 20px !important;
+  background-color: #fff !important;
+  box-shadow: 0 2px 4px 0 rgba(47, 47, 47, 0.2) !important;
+}
+
+.MuiSwitch-track {
+  border-radius: 25px !important;
+  opacity: 1 !important;
+}
+
+.MuiSwitch-switchBase.Mui-checked {
+  transform: translateX(17px) !important;
+}
+
+.section-title MuiBox-root css-0 {
+  margin-bottom: 0px !important;
+}

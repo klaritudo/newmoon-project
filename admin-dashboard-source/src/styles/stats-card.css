@@ -1,0 +1,315 @@
+/* 통계 카드 기본 스타일 */
+.stats-card-root {
+  height: 100%;
+  min-height: 120px;
+  border-radius: 12px;
+  box-shadow: 0 0 20px 0 rgba(76, 87, 125, 0.05) !important;
+  background: #ffffff !important;
+  transition: all 0.3s ease;
+  position: relative;
+  border: 1px solid #E4E6EF !important;
+  overflow: hidden;
+}
+
+.stats-card-root:hover {
+  box-shadow: 0 2px 30px 0 rgba(76, 87, 125, 0.08) !important;
+  transform: translateY(-3px);
+  border-color: #D7DAE3 !important;
+}
+
+.stats-card-content {
+  height: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-card-header {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+/* 현황판 카드 아이콘 줄 관련 요소만 스크롤 제거 */
+.stats-card-header .MuiBox-root,
+.MuiBox-root.css-1efxev,
+.MuiBox-root.css-5413bq,
+div[class*="css-1efxev"],
+div[class*="css-5413bq"] {
+  overflow: hidden !important;
+}
+
+.stats-card-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #a1a5b7;
+  line-height: 1.3;
+}
+
+.stats-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+}
+
+.stats-card-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #000000;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.stats-card-trend-container {
+  display: flex;
+  align-items: center;
+  margin-top: auto;
+  min-height: 20px;
+  flex-wrap: nowrap;
+}
+
+.stats-card-trend {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  padding: 3px 8px;
+  height: fit-content;
+}
+
+.stats-card-trend svg {
+  font-size: 14px;
+  margin-right: 3px;
+}
+
+.stats-card-trend-up {
+  background-color: rgba(80, 205, 137, 0.1);
+  color: #50cd89;
+}
+
+.stats-card-trend-down {
+  background-color: rgba(241, 65, 108, 0.1);
+  color: #f1416c;
+}
+
+.stats-card-comparison-text {
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.stats-card-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: auto 0;
+}
+
+.card-drag-handle {
+  cursor: move;
+  cursor: grab;
+  touch-action: none;
+}
+
+.card-drag-handle:active {
+  cursor: grabbing;
+}
+
+.card-drag-indicator {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 12px;
+  height: 12px;
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+}
+
+.stats-card-root:hover .card-drag-indicator {
+  opacity: 0.6;
+}
+
+/* 드래그 핸들 스타일 */
+.stats-card-drag-handle {
+  cursor: move;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+}
+
+.stats-card-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* 드래그 중일 때 시각적 피드백 */
+.stats-card-drag-handle:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* 모바일 환경에서 드래그 핸들 스타일 */
+@media (max-width: 600px) {
+  .stats-card-drag-handle {
+    touch-action: pan-y;
+  }
+}
+
+/* 카드 색상 변형 */
+.stats-card-blue {
+  background: linear-gradient(135deg, #f0f7ff 0%, #e1f0ff 100%);
+  border-color: rgba(0, 149, 255, 0.1);
+}
+
+.stats-card-green {
+  background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%);
+  border-color: rgba(16, 185, 129, 0.1);
+}
+
+.stats-card-purple {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border-color: rgba(139, 92, 246, 0.1);
+}
+
+.stats-card-orange {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-color: rgba(249, 115, 22, 0.1);
+}
+
+.stats-card-red {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: rgba(239, 68, 68, 0.1);
+}
+
+.stats-card-yellow {
+  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  border-color: rgba(234, 179, 8, 0.1);
+}
+
+.stats-card-teal {
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+  border-color: rgba(20, 184, 166, 0.1);
+}
+
+.stats-card-cyan {
+  background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+  border-color: rgba(6, 182, 212, 0.1);
+}
+
+.stats-card-gray {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-color: rgba(107, 114, 128, 0.1);
+}
+
+/* 유저 타입별 스타일 조정 */
+.stats-card-personal {
+  border-left: 3px solid #0ea5e9;
+}
+
+.stats-card-sub1 {
+  border-left: 3px solid #8b5cf6;
+}
+
+.stats-card-master {
+  border-left: 3px solid #f59e0b;
+}
+
+.stats-card-agent {
+  border-left: 3px solid #10b981;
+}
+
+.stats-card-store {
+  border-left: 3px solid #ef4444;
+}
+
+.stats-card-member {
+  border-left: 3px solid #6366f1;
+}
+
+/* 다크 모드 조정 */
+@media (prefers-color-scheme: dark) {
+  .stats-card-root {
+    background: var(--bg-paper);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .stats-card-title {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .stats-card-value {
+    color: rgba(255, 255, 255, 0.85);
+  }
+  
+  .stats-card-comparison-text {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  
+  /* 다크 모드 카드 색상 변형 */
+  .stats-card-blue {
+    background: linear-gradient(135deg, rgba(3, 105, 161, 0.2) 0%, rgba(3, 105, 161, 0.1) 100%);
+    border-color: rgba(14, 165, 233, 0.2);
+  }
+  
+  .stats-card-green {
+    background: linear-gradient(135deg, rgba(6, 95, 70, 0.2) 0%, rgba(6, 95, 70, 0.1) 100%);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+  
+  .stats-card-purple {
+    background: linear-gradient(135deg, rgba(91, 33, 182, 0.2) 0%, rgba(91, 33, 182, 0.1) 100%);
+    border-color: rgba(139, 92, 246, 0.2);
+  }
+  
+  .stats-card-orange {
+    background: linear-gradient(135deg, rgba(154, 52, 18, 0.2) 0%, rgba(154, 52, 18, 0.1) 100%);
+    border-color: rgba(249, 115, 22, 0.2);
+  }
+  
+  .stats-card-red {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(153, 27, 27, 0.1) 100%);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+  
+  .stats-card-yellow {
+    background: linear-gradient(135deg, rgba(133, 77, 14, 0.2) 0%, rgba(133, 77, 14, 0.1) 100%);
+    border-color: rgba(234, 179, 8, 0.2);
+  }
+  
+  .stats-card-teal {
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.2) 0%, rgba(15, 118, 110, 0.1) 100%);
+    border-color: rgba(20, 184, 166, 0.2);
+  }
+  
+  .stats-card-cyan {
+    background: linear-gradient(135deg, rgba(21, 94, 117, 0.2) 0%, rgba(21, 94, 117, 0.1) 100%);
+    border-color: rgba(6, 182, 212, 0.2);
+  }
+  
+  .stats-card-gray {
+    background: linear-gradient(135deg, rgba(31, 41, 55, 0.2) 0%, rgba(31, 41, 55, 0.1) 100%);
+    border-color: rgba(107, 114, 128, 0.2);
+  }
+}
+
+/* 모든 컨테이너에 가로 스크롤 방지 적용 */
+.MuiBox-root, .MuiContainer-root, .dashboard-container, .dashboard-section {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 400px) {
+  /* 가로 스크롤 방지 */
+  body, html, .MuiBox-root, .MuiContainer-root, .dashboard-container, .dashboard-section {
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+} 
+
+.MuiFormControl-root.css-1ydua6h-MuiFormControl-root {
+  margin-top: 10px !important;
+  margin-bottom: 10px !important;
+}

@@ -1,0 +1,1022 @@
+:root {
+  /* 기본 테마 색상 변수 (라이트 모드) */
+  --primary-color: #1976d2;
+  --primary-rgb: 25, 118, 210;
+  --primary-light: #4791db;
+  --primary-lighter: rgba(25, 118, 210, 0.08);
+  --primary-dark: #115293;
+  
+  --secondary-color: #dc004e;
+  --secondary-light: #e33371;
+  --secondary-dark: #9a0036;
+  
+  --background-color: #f5f5f5;
+  --paper-color: #ffffff;
+  --divider-color: rgba(0, 0, 0, 0.12);
+  
+  --text-primary: rgba(0, 0, 0, 0.87);
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --text-disabled: rgba(0, 0, 0, 0.38);
+  
+  --error-color: #f44336;
+  --warning-color: #ff9800;
+  --info-color: #2196f3;
+  --success-color: #4caf50;
+  
+  /* 테이블 관련 */
+  --table-header-bg: #f1f1f1;
+  --table-row-hover: rgba(0, 0, 0, 0.04);
+  --table-border: #e0e0e0;
+  
+  /* 그림자 */
+  --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+  --shadow-dark: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+  
+  /* 아이콘 */
+  --icon-color: rgba(0, 0, 0, 0.54);
+  
+  /* 트랜지션 */
+  --transition-duration: 0.3s;
+}
+
+/* 다크 모드 테마 */
+[data-theme="dark"] {
+  --primary-color: #90caf9;
+  --primary-rgb: 144, 202, 249;
+  --primary-light: #e3f2fd;
+  --primary-lighter: rgba(144, 202, 249, 0.12);
+  --primary-dark: #42a5f5;
+  
+  --secondary-color: #f48fb1;
+  --secondary-light: #fce4ec;
+  --secondary-dark: #ec407a;
+  
+  --background-color: #121212;
+  --background-secondary: #1e1e1e;
+  --background-paper: #1e1e1e;
+  --paper-color: #1e1e1e;
+  --divider-color: rgba(255, 255, 255, 0.12);
+  --border-color: rgba(255, 255, 255, 0.23);
+  --hover-color: rgba(255, 255, 255, 0.08);
+  
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-disabled: rgba(255, 255, 255, 0.38);
+  
+  --error-color: #f44336;
+  --warning-color: #ff9800;
+  --info-color: #29b6f6;
+  --success-color: #66bb6a;
+  
+  /* 테이블 관련 */
+  --table-header-bg: #2c2c2c;
+  --table-row-hover: rgba(255, 255, 255, 0.08);
+  --table-border: #424242;
+  
+  /* 그림자 */
+  --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-medium: 0 3px 6px rgba(0, 0, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.6);
+  --shadow-dark: 0 10px 20px rgba(0, 0, 0, 0.7), 0 6px 6px rgba(0, 0, 0, 0.7);
+  
+  /* 아이콘 */
+  --icon-color: rgba(255, 255, 255, 0.54);
+}
+
+/* 추가: body, html에 테마 변수 적용 */
+html, body {
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  transition: background-color var(--transition-duration) ease,
+              color var(--transition-duration) ease;
+}
+
+/* Material UI와 연동하기 위한 부가 설정 */
+.MuiPaper-root {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  transition: background-color var(--transition-duration) ease,
+              box-shadow var(--transition-duration) ease,
+              color var(--transition-duration) ease;
+}
+
+.MuiAppBar-root {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-light) !important;
+}
+
+.MuiButton-root {
+  transition: background-color var(--transition-duration) ease,
+              color var(--transition-duration) ease;
+}
+
+.MuiListItem-root {
+  color: var(--text-primary) !important;
+}
+
+.MuiIconButton-root {
+  color: var(--icon-color) !important;
+}
+
+.MuiIconButton-root:hover {
+  background-color: var(--primary-lighter) !important;
+}
+
+.MuiDivider-root {
+  background-color: var(--divider-color) !important;
+}
+
+/*.MuiTypography-root {
+  color: var(--text-primary) !important;
+}*/
+
+.MuiTypography-colorTextSecondary {
+  color: var(--text-secondary) !important;
+}
+
+.MuiInputBase-root {
+  color: var(--text-primary) !important;
+}
+
+.MuiInputBase-input {
+  color: var(--text-primary) !important;
+}
+
+.MuiMenu-paper, 
+.MuiPopover-paper {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--divider-color) !important;
+}
+
+/* MUI Drawer 및 기타 컴포넌트 스타일 강제 적용 */
+.MuiDrawer-paper {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  border-right: 1px solid var(--divider-color) !important;
+}
+
+.MuiToolbar-root {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.MuiMenuItem-root {
+  color: var(--text-primary) !important;
+}
+
+.MuiMenuItem-root:hover {
+  background-color: var(--primary-lighter) !important;
+}
+
+[data-theme="dark"] .notification-time,
+[data-theme="dark"] .notification-message {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .notification-item.unread {
+  background-color: var(--primary-lighter) !important;
+}
+
+/* 색상 강제 적용 */
+.css-sidebar {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  border-right: 1px solid var(--divider-color) !important;
+}
+
+.css-header {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-light) !important;
+}
+
+/* 일반 항목 */
+a, button, input, select, textarea {
+  color: inherit;
+}
+
+/* 다크 모드용 아이콘 색상 */
+[data-theme="dark"] svg {
+  color: var(--icon-color);
+}
+
+/* 다크 모드일 때 내비게이션 메뉴 아이템 */
+[data-theme="dark"] .MuiListItemButton-root {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .MuiListItemButton-root.Mui-selected {
+  background-color: var(--primary-lighter) !important;
+  color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .MuiListItemButton-root:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 대화창/모달 스타일 */
+.MuiDialog-paper {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 테이블 스타일 강제 적용 - AG Grid */
+.ag-theme-material {
+  --ag-background-color: var(--paper-color) !important;
+  --ag-foreground-color: var(--text-primary) !important;
+  --ag-border-color: var(--divider-color) !important;
+  --ag-secondary-border-color: var(--divider-color) !important;
+  --ag-header-background-color: var(--table-header-bg) !important;
+  --ag-odd-row-background-color: var(--paper-color) !important;
+  --ag-row-hover-color: var(--table-row-hover) !important;
+  --ag-header-foreground-color: var(--text-primary) !important;
+  --ag-disabled-foreground-color: var(--text-disabled) !important;
+  --ag-subheader-background-color: var(--table-header-bg) !important;
+  --ag-control-panel-background-color: var(--background-color) !important;
+  background-color: var(--paper-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material {
+  --ag-alpine-active-color: var(--primary-color) !important;
+  --ag-selected-row-background-color: rgba(144, 202, 249, 0.16) !important;
+}
+
+/* 테이블 셀 스타일 */
+[data-theme="dark"] .ag-theme-material .ag-cell {
+  color: var(--text-primary) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* 테이블 헤더 */
+[data-theme="dark"] .ag-theme-material .ag-header-cell {
+  color: var(--text-primary) !important;
+  background-color: var(--table-header-bg) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* 테이블 필터 */
+[data-theme="dark"] .ag-theme-material .ag-filter-toolpanel-header,
+[data-theme="dark"] .ag-theme-material .ag-filter-toolpanel-search,
+[data-theme="dark"] .ag-theme-material .ag-status-bar,
+[data-theme="dark"] .ag-theme-material .ag-header-row {
+  color: var(--text-primary) !important;
+  background-color: var(--table-header-bg) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* 페이지네이션 */
+[data-theme="dark"] .ag-theme-material .ag-paging-panel {
+  color: var(--text-primary) !important;
+  background-color: var(--table-header-bg) !important;
+}
+
+/* 팝업 메뉴 스타일 */
+[data-theme="dark"] .ag-theme-material .ag-menu {
+  background-color: var(--paper-color) !important;
+  border-color: var(--divider-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-menu-option {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-menu-option:hover {
+  background-color: var(--primary-lighter) !important;
+}
+
+/* 입력 필드 */
+[data-theme="dark"] .ag-theme-material input,
+[data-theme="dark"] .ag-theme-material select {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* 테이블 행 스타일 */
+[data-theme="dark"] .ag-theme-material .ag-row {
+  background-color: var(--paper-color) !important;
+  border-color: var(--divider-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-row-even {
+  background-color: var(--paper-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-row-odd {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* 테이블 내 버튼 */
+[data-theme="dark"] .ag-theme-material .ag-standard-button {
+  color: var(--text-primary) !important;
+  background-color: var(--paper-color) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* 알림판 특수 스타일 */
+[data-theme="dark"] .notification-panel {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  border-left: 1px solid var(--divider-color) !important;
+}
+
+[data-theme="dark"] .notification-panel-header {
+  border-bottom: 1px solid var(--divider-color) !important;
+}
+
+[data-theme="dark"] .account-menu-header {
+  border-bottom: 1px solid var(--divider-color) !important;
+}
+
+[data-theme="dark"] .account-menu-item:hover {
+  background-color: var(--primary-lighter) !important;
+}
+
+[data-theme="dark"] .MuiListItemIcon-root {
+  color: var(--icon-color) !important;
+}
+
+[data-theme="dark"] .css-sidebar {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* 테이블 스타일 */
+[data-theme="dark"] .MuiTableContainer-root {
+  background-color: var(--background-secondary) !important;
+}
+
+[data-theme="dark"] .MuiTable-root {
+  background-color: var(--paper-color);
+}
+
+[data-theme="dark"] .MuiTableHead-root {
+  background-color: var(--table-header-bg);
+}
+
+[data-theme="dark"] .MuiTableCell-head {
+  background-color: var(--table-header-bg);
+  color: var(--text-primary);
+  border-bottom-color: var(--divider-color);
+}
+
+[data-theme="dark"] .MuiTableBody-root .MuiTableRow-root {
+  background-color: var(--paper-color);
+  border-bottom-color: var(--divider-color);
+}
+
+[data-theme="dark"] .MuiTableBody-root .MuiTableRow-root:nth-of-type(odd) {
+  background-color: var(--background-secondary);
+}
+
+[data-theme="dark"] .MuiTableBody-root .MuiTableRow-root:hover {
+  background-color: var(--hover-color);
+}
+
+[data-theme="dark"] .MuiTableCell-body {
+  color: var(--text-primary);
+  border-bottom-color: var(--divider-color);
+}
+
+[data-theme="dark"] .MuiTablePagination-root {
+  color: var(--text-primary);
+}
+
+/* 알림판 스타일 */
+[data-theme="dark"] .MuiMenu-paper,
+[data-theme="dark"] .MuiPopover-paper {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-medium);
+}
+
+/* 타이틀 바 및 헤더 영역 */
+[data-theme="dark"] .table-header,
+[data-theme="dark"] .page-header,
+[data-theme="dark"] .filter-section {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .table-title-text,
+[data-theme="dark"] .page-title {
+  color: var(--text-primary) !important;
+}
+
+/* 페이지네이션 영역 */
+[data-theme="dark"] .pagination-container,
+[data-theme="dark"] .filter-pagination-container {
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .MuiTablePagination-root {
+  color: var(--text-primary) !important;
+  background-color: var(--background-secondary) !important;
+}
+
+[data-theme="dark"] .MuiTablePagination-selectIcon,
+[data-theme="dark"] .MuiTablePagination-actions .MuiIconButton-root {
+  color: var(--text-primary) !important;
+}
+
+/* AG Grid 그룹 컬럼 헤더 */
+[data-theme="dark"] .ag-theme-material .ag-header-group-cell,
+[data-theme="dark"] .ag-theme-material .ag-header-group-cell-label {
+  background-color: var(--table-header-bg) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--divider-color) !important;
+  border-right: 1px solid var(--divider-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-header-group-cell-with-group {
+  background-color: var(--table-header-bg) !important;
+}
+
+/* 알림 패널 개선 */
+[data-theme="dark"] .notification-panel,
+[data-theme="dark"] .notification-list,
+[data-theme="dark"] .notification-header {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .notification-icon {
+  color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .notification-title {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .notification-empty {
+  color: var(--text-secondary) !important;
+}
+
+/* 기본 알림 스타일 */
+[data-theme="dark"] .MuiMenuItem-root {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .MuiMenuItem-root:hover {
+  background-color: var(--hover-color);
+}
+
+[data-theme="dark"] .notification-item {
+  background-color: var(--background-secondary);
+  border-bottom: 1px solid var(--divider-color);
+  padding: 12px;
+}
+
+[data-theme="dark"] .notification-item:hover {
+  background-color: var(--hover-color);
+}
+
+[data-theme="dark"] .notification-content {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .notification-time,
+[data-theme="dark"] .notification-subtitle {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .notification-item.unread {
+  background-color: rgba(144, 202, 249, 0.08);
+}
+
+/* 메인 컨텐츠 영역 */
+[data-theme="dark"] .main-content {
+  background-color: var(--background-color) !important; 
+}
+
+/* 카드 스타일 */
+[data-theme="dark"] .MuiCard-root {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-light) !important;
+}
+
+[data-theme="dark"] .MuiCardHeader-root {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--divider-color);
+}
+
+[data-theme="dark"] .MuiCardContent-root {
+  color: var(--text-primary) !important;
+}
+
+/* 사용자 메뉴 및 드롭다운 */
+[data-theme="dark"] .user-menu,
+[data-theme="dark"] .dropdown-menu {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-medium) !important;
+}
+
+/* 표 상단 요약 정보 패널 */
+[data-theme="dark"] .summary-panel,
+[data-theme="dark"] .card-panel {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .summary-value {
+  color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .summary-label {
+  color: var(--text-secondary) !important;
+}
+
+/* 버튼 스타일 */
+[data-theme="dark"] .MuiButton-outlined {
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .MuiButton-outlined:hover {
+  background-color: var(--hover-color) !important;
+}
+
+/* 입력 필드 스타일 개선 */
+[data-theme="dark"] .MuiOutlinedInput-root {
+  background-color: var(--paper-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .MuiInputLabel-root {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .MuiInputLabel-root.Mui-focused {
+  color: var(--primary-color) !important;
+}
+
+/* AG Grid 추가 개선 */
+[data-theme="dark"] .ag-theme-material {
+  --ag-subheader-toolbar-background-color: var(--table-header-bg) !important;
+  --ag-row-border-color: var(--divider-color) !important;
+  --ag-header-column-separator-color: var(--divider-color) !important;
+  --ag-header-column-resize-handle-color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-header-cell-resize::after {
+  background-color: var(--divider-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-checkbox-input-wrapper {
+  background-color: transparent !important;
+  border-color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-checkbox-input-wrapper.ag-checked {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* 알림판 및 메뉴 스타일 */
+[data-theme="dark"] .MuiMenu-paper,
+[data-theme="dark"] .MuiPopover-paper {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-medium);
+}
+
+/* 입력 필드 */
+[data-theme="dark"] .ag-theme-material input,
+[data-theme="dark"] .ag-theme-material select {
+  background-color: var(--paper-color) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* AG Grid 테이블 스타일 */
+[data-theme="dark"] .ag-theme-material {
+  background-color: var(--paper-color);
+  color: var(--text-primary);
+  border: 1px solid var(--divider-color);
+  --ag-subheader-toolbar-background-color: var(--table-header-bg) !important;
+  --ag-row-border-color: var(--divider-color) !important;
+  --ag-header-column-separator-color: var(--divider-color) !important;
+  --ag-header-column-resize-handle-color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-header {
+  background-color: var(--table-header-bg);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--divider-color);
+}
+
+[data-theme="dark"] .ag-theme-material .ag-header-cell {
+  color: var(--text-primary);
+  border-right: 1px solid var(--divider-color);
+}
+
+[data-theme="dark"] .ag-theme-material .ag-header-cell-resize::after {
+  background-color: var(--divider-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-row {
+  background-color: var(--paper-color);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--divider-color);
+}
+
+[data-theme="dark"] .ag-theme-material .ag-row-odd {
+  background-color: var(--background-secondary);
+}
+
+[data-theme="dark"] .ag-theme-material .ag-row:hover {
+  background-color: var(--hover-color);
+}
+
+[data-theme="dark"] .ag-theme-material .ag-cell {
+  border-right: 1px solid var(--divider-color);
+}
+
+[data-theme="dark"] .ag-theme-material .ag-checkbox-input-wrapper {
+  background-color: transparent !important;
+  border-color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-checkbox-input-wrapper.ag-checked {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .ag-theme-material .ag-paging-panel {
+  background-color: var(--table-header-bg);
+  color: var(--text-primary);
+  border-top: 1px solid var(--divider-color);
+}
+
+/* 페이지네이션 영역 추가 스타일 - 더 강력한 선택자 */
+[data-theme="dark"] .ag-theme-material .ag-paging-panel,
+[data-theme="dark"] .ag-theme-material [class*="ag-paging"],
+[data-theme="dark"] .ag-theme-material [role="row"][class*="ag-paging"],
+[data-theme="dark"] [role="presentation"] [class*="MuiToolbar"],
+[data-theme="dark"] [class*="MuiToolbar"][class*="MuiTablePagination"] {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--divider-color) !important;
+}
+
+[data-theme="dark"] .MuiTablePagination-displayedRows,
+[data-theme="dark"] .MuiTablePagination-selectLabel,
+[data-theme="dark"] .ag-paging-row-summary-panel,
+[data-theme="dark"] .ag-paging-page-summary-panel {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ag-paging-button {
+  color: var(--text-primary) !important;
+  background-color: transparent !important;
+  border: 1px solid var(--divider-color) !important;
+}
+
+[data-theme="dark"] .ag-paging-button:hover {
+  background-color: var(--hover-color) !important;
+}
+
+[data-theme="dark"] .pagination-item,
+[data-theme="dark"] .pagination-button {
+  color: var(--text-primary) !important;
+  background-color: var(--background-secondary) !important;
+  border-color: var(--divider-color) !important;
+}
+
+[data-theme="dark"] .pagination-item.active {
+  background-color: var(--primary-color) !important;
+  color: var(--background-secondary) !important;
+}
+
+/* 상단 검색 필터 영역 */
+[data-theme="dark"] .search-wrapper,
+[data-theme="dark"] .filter-wrapper,
+[data-theme="dark"] .MuiInputBase-root.MuiOutlinedInput-root {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .MuiInputBase-input {
+  color: var(--text-primary) !important;
+}
+
+/* 테이블 상단 요약 정보 카드 */
+[data-theme="dark"] .summary-card,
+[data-theme="dark"] .MuiPaper-elevation1 {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--divider-color) !important;
+  box-shadow: var(--shadow-light) !important;
+}
+
+/* 알림판 스타일 핵심 선택자 추가 */
+[data-theme="dark"] [role="presentation"] [class*="MuiPaper"],
+[data-theme="dark"] [class*="MuiPopover"] [class*="MuiPaper"],
+[data-theme="dark"] [class*="MuiMenu"] [class*="MuiPaper"],
+[data-theme="dark"] div[role="presentation"] > div[class*="MuiPaper"],
+[data-theme="dark"] div[class*="MuiPopover"] > div[class*="MuiPaper"] {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-medium) !important;
+}
+
+/* 알림판 스타일 추가 */
+[data-theme="dark"] #notifications-panel,
+[data-theme="dark"] .notifications-dropdown,
+[data-theme="dark"] .notification-wrapper,
+[data-theme="dark"] .MuiPopover-root .MuiPaper-root {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .notification-header,
+[data-theme="dark"] .notification-footer {
+  background-color: var(--table-header-bg) !important;
+  border-color: var(--divider-color) !important;
+}
+
+[data-theme="dark"] .notification-list {
+  background-color: var(--background-secondary) !important;
+}
+
+[data-theme="dark"] .notification-badge {
+  background-color: var(--error-color) !important;
+  color: white !important;
+}
+
+/* Material UI 컴포넌트 강제 스타일 */
+[data-theme="dark"] [class*="MuiPopover"] *,
+[data-theme="dark"] [class*="MuiMenu"] *,
+[data-theme="dark"] [role="presentation"] [class*="MuiPaper"] * {
+  color: var(--text-primary) !important;
+}
+
+/* 상단 탭 및 인디케이터 스타일링 */
+[data-theme="dark"] .MuiTabs-root,
+[data-theme="dark"] [class*="MuiTabs"],
+[data-theme="dark"] [class*="MuiTab"] {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .MuiTabs-indicator,
+[data-theme="dark"] [class*="MuiTabs-indicator"] {
+  background-color: var(--primary-color) !important;
+}
+
+/* AG Grid 툴바 및 페이지네이션 구체적 선택자 */
+[data-theme="dark"] div.ag-paging-panel,
+[data-theme="dark"] div[ref="ePagingPanel"],
+[data-theme="dark"] div.ag-status-bar,
+[data-theme="dark"] div.ag-status-panel,
+[data-theme="dark"] div.ag-paging-row-summary-panel,
+[data-theme="dark"] div.ag-paging-page-summary-panel {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 드롭다운 스타일 */
+[data-theme="dark"] .ag-theme-material .ag-select,
+[data-theme="dark"] .ag-theme-material .ag-select-list,
+[data-theme="dark"] .MuiSelect-select,
+[data-theme="dark"] .MuiSelect-root {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* 임베디드 버튼 및 아이콘 */
+[data-theme="dark"] .ag-theme-material button,
+[data-theme="dark"] .MuiIconButton-root {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .MuiIconButton-root:hover {
+  background-color: var(--hover-color) !important;
+}
+
+/* 행 액션 버튼 */
+[data-theme="dark"] .row-action-btn,
+[data-theme="dark"] .action-button,
+[data-theme="dark"] .table-action-button {
+  color: var(--text-primary) !important;
+  background-color: transparent !important;
+}
+
+[data-theme="dark"] .row-action-btn:hover,
+[data-theme="dark"] .action-button:hover {
+  background-color: var(--hover-color) !important;
+}
+
+/* 인라인 스타일 무시 - 최후의 수단 */
+[data-theme="dark"] [style*="background"],
+[data-theme="dark"] [style*="background-color"] {
+  background-color: var(--background-secondary) !important;
+}
+
+[data-theme="dark"] [style*="color"]:not([style*="background-color"]) {
+  color: var(--text-primary) !important;
+}
+
+/* 특수 선택자 - 페이지네이션 및 알림판 직접 타겟팅 */
+[data-theme="dark"] div[class*="Pagination"],
+[data-theme="dark"] nav[class*="Pagination"],
+[data-theme="dark"] div[class*="pagination"],
+[data-theme="dark"] div[aria-label*="pagination"],
+[data-theme="dark"] [class*="Pagination"] *,
+[data-theme="dark"] [class*="pagination"] * {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--divider-color) !important;
+}
+
+/* 알림판 및 팝업 최종 강제 스타일 */
+[data-theme="dark"] [id*="menu-"],
+[data-theme="dark"] [id*="popup-"],
+[data-theme="dark"] [id*="popover-"],
+[data-theme="dark"] [id*="notification"],
+[data-theme="dark"] [id*="alert"],
+[data-theme="dark"] [id*="dialog"],
+[data-theme="dark"] [aria-labelledby*="notification"],
+[data-theme="dark"] [aria-labelledby*="menu"],
+[data-theme="dark"] [role="menu"],
+[data-theme="dark"] [role="dialog"],
+[data-theme="dark"] [role="alertdialog"],
+[data-theme="dark"] [role="tooltip"] {
+  background-color: var(--background-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* 팝오버 및 메뉴 컨텐츠 강제 스타일 */
+[data-theme="dark"] [role="menu"] *,
+[data-theme="dark"] [role="dialog"] *,
+[data-theme="dark"] [role="tooltip"] *,
+[data-theme="dark"] [id*="menu-"] *,
+[data-theme="dark"] [id*="popup-"] *,
+[data-theme="dark"] [id*="popover-"] *,
+[data-theme="dark"] [id*="notification"] * {
+  color: var(--text-primary) !important;
+}
+
+/* 전역 최후 방어선 */
+[data-theme="dark"] body.dark-mode *,
+[data-theme="dark"] div[class*="mui"],
+[data-theme="dark"] div[class*="Mui"] {
+  color: var(--text-primary);
+}
+
+/* 백그라운드 최후 방어선 */
+[data-theme="dark"] div[class*="Paper"],
+[data-theme="dark"] div[class*="paper"],
+[data-theme="dark"] div[class*="Menu"],
+[data-theme="dark"] div[class*="menu"],
+[data-theme="dark"] div[class*="Popover"],
+[data-theme="dark"] div[class*="popover"],
+[data-theme="dark"] div[class*="Dialog"],
+[data-theme="dark"] div[class*="dialog"],
+[data-theme="dark"] div[class*="Drawer"],
+[data-theme="dark"] div[class*="drawer"] {
+  background-color: var(--background-secondary) !important;
+}
+
+/* 알림판 패딩 조정 */
+.mui-style-19x2pxy {
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+/* 글로벌 페이지 헤더 스타일 */
+.page-header {
+  margin-bottom: 20px;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 8px !important;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.page-title {
+  font-weight: 600;
+  font-size: 20px;
+  color: #333;
+}
+
+/* MuiBox-root 관련 공통 스타일 */
+.MuiBox-root.header-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* MuiBox-root 동적 클래스에 대한 스타일 재정의 */
+.MuiBox-root[class*="css-"] {
+  background-color: inherit;
+}
+
+/* 테이블 헤더 공통 스타일 */
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #e0e0e0;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.mui-style-cmy3pn {
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.table-title {
+  display: flex;
+  align-items: center;
+}
+
+.table-title-text {
+  font-weight: 600;
+  font-size: 16px;
+  margin-left: 8px;
+  color: #333;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
+
+/* 필터 및 페이지네이션 공통 스타일 */
+.filters-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  background-color: #fff;
+}
+
+.table-pagination-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+  
+}
+
+.mui-style-s1u7nh {
+  padding: 0 !important;
+}
+
+
+.pagination-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.mui-style-bhsq7h-MuiStack-root {
+  margin-bottom: 0 !important;
+}
+
+/* AG Grid 공통 스타일 보강 */
+.ag-theme-material:not(.enhanced-table) {
+  --ag-header-background-color: #f5f7fa;
+  --ag-odd-row-background-color: #ffffff;
+  --ag-row-border-color: #e0e0e0;
+  --ag-header-column-separator-color: #d3d3d3;
+  --ag-row-hover-color: rgba(33, 150, 243, 0.1);
+  --ag-selected-row-background-color: rgba(33, 150, 243, 0.2);
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+} 

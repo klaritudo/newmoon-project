@@ -1,0 +1,174 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+import {
+  Box,
+  TextField,
+  MenuItem,
+  InputAdornment,
+  Button,
+  IconButton,
+  Stack
+} from '@mui/material';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+
+/**
+ * 테이블 필터 컴포넌트
+ * 테이블 데이터를 필터링하기 위한 다양한 옵션을 제공하는 컴포넌트입니다.
+ * 
+ * @param {Object} props - 컴포넌트 props
+ * @param {Object} props.activeFilters - 현재 활성화된 필터 값들
+ * @param {Function} props.handleFilterChange - 필터 변경 처리 함수
+ * @param {Array} props.filterOptions - 필터 옵션 배열
+ * @param {boolean} props.showDateFilter - 날짜 필터 버튼 표시 여부
+ * @param {Function} props.handleOpenDateFilter - 날짜 필터 열기 함수
+ * @param {boolean} props.isDateFilterActive - 날짜 필터 활성화 여부
+ * @param {Object} props.sx - 추가 스타일 (Material-UI sx prop)
+ * @returns {JSX.Element}
+ */
+const TableFilter = ({
+  activeFilters = {},
+  handleFilterChange,
+  filterOptions = [],
+  showDateFilter = true,
+  handleOpenDateFilter,
+  isDateFilterActive = false,
+  sx = {}
+}) => {
+  // 기본 스타일
+  const baseFilterStyle = {
+    backgroundColor: '#fff',
+    borderRadius: '4px',
+    border: '1px solid #e0e0e0'
+  };
+
+  // 텍스트필드 스타일
+  const textFieldStyle = {
+    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+    '& .MuiInputBase-root': { height: '32px' },
+    '& .MuiSelect-select': {
+      minWidth: 'auto',
+      paddingLeft: '4px',
+      paddingRight: '24px' // 드롭다운 아이콘 공간
+    }
+  };
+
+  return (
+    <Stack 
+      direction="row" 
+      spacing={1} 
+      className="table-filter-container"
+      flexWrap="wrap"
+      alignItems="center"
+      sx={{
+        mb: 0,
+        mr: 2,
+        gap: '8px',
+        ...sx
+      }}
+    >
+      {/* 동적으로 생성된 필터 옵션들 */}
+      {filterOptions && filterOptions.length > 0 && filterOptions.map((option) => {
+        // option.items가 없는 경우 건너뛰기
+        if (!option.items || !Array.isArray(option.items)) {
+          // console.warn(`TableFilter: option.items가 없거나 배열이 아닙니다:`, option);
+          return null;
+        }
+        
+        return (
+        <Box 
+          key={option.id}
+          sx={baseFilterStyle}
+        >
+          <TextField
+            select
+            size="small"
+            value={activeFilters[option.id] || ''}
+            onChange={(e) => handleFilterChange(option.id, e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start" sx={{ fontSize: '0.75rem', color: '#757575' }}>
+                  {option.label}
+                </InputAdornment>
+              ),
+              sx: { fontSize: '0.75rem' }
+            }}
+            SelectProps={{
+              MenuProps: {
+                anchorOrigin: {
+                  vertical: 'bottom',
+                  horizontal: 'left',
+                },
+                transformOrigin: {
+                  vertical: 'top',
+                  horizontal: 'left',
+                },
+                PaperProps: {
+                  sx: {
+                    maxHeight: 300,
+                    zIndex: 1400,  // Header보다 높게
+                  }
+                },
+                disablePortal: false,  // Portal 렌더링 활성화
+              }
+            }}
+            sx={textFieldStyle}
+          >
+            {option.items.map((item) => (
+              <MenuItem key={item.value} value={item.value}>
+                {item.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
+        );
+      })}
+      
+      {/* 날짜 필터 버튼 */}
+      {showDateFilter && (
+        <Button
+          variant={isDateFilterActive ? "contained" : "outlined"}
+          size="small"
+          startIcon={<CalendarTodayIcon sx={{ fontSize: '1rem' }} />}
+          onClick={(event) => handleOpenDateFilter && handleOpenDateFilter(event)}
+          sx={{
+            height: '32px',
+            minWidth: 'auto',
+            fontSize: '0.75rem',
+            backgroundColor: isDateFilterActive ? '#1976d2' : '#fff',
+            color: isDateFilterActive ? '#fff' : '#757575',
+            borderColor: isDateFilterActive ? '#1976d2' : '#e0e0e0',
+            '&:hover': {
+              backgroundColor: isDateFilterActive ? '#1565c0' : '#f5f5f5',
+              borderColor: isDateFilterActive ? '#1565c0' : '#ccc'
+            }
+          }}
+        >
+          날짜 필터
+        </Button>
+      )}
+    </Stack>
+  );
+};
+
+TableFilter.propTypes = {
+  activeFilters: PropTypes.object,
+  handleFilterChange: PropTypes.func.isRequired,
+  filterOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+      items: PropTypes.arrayOf(
+        PropTypes.shape({
+          value: PropTypes.string.isRequired,
+          label: PropTypes.string.isRequired
+        })
+      ).isRequired
+    })
+  ),
+  showDateFilter: PropTypes.bool,
+  handleOpenDateFilter: PropTypes.func,
+  isDateFilterActive: PropTypes.bool,
+  sx: PropTypes.object
+};
+
+export default TableFilter; 

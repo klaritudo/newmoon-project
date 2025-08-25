@@ -1,0 +1,120 @@
+.agent-level-settings {
+  padding: 20px;
+}
+
+.agent-level-settings .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.agent-level-settings .page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #181C32;
+}
+
+.agent-level-settings .tab-container {
+  margin-bottom: 20px;
+}
+
+.agent-level-settings .table-container {
+  position: relative;
+  margin-bottom: 20px;
+  max-height: none;
+  overflow: visible;
+}
+
+.agent-level-settings .table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.agent-level-settings .add-button {
+  margin-left: auto;
+}
+
+.agent-level-settings .color-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-right: 8px;
+  border: 1px solid #E4E6EF;
+}
+
+/* 팝업 스타일 */
+.agent-level-settings .popup-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.agent-level-settings .popup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.agent-level-settings .color-picker-container {
+  margin-top: 10px;
+}
+
+.agent-level-settings .color-picker-preview {
+  width: 100%;
+  height: 40px;
+  border-radius: 4px;
+  margin-top: 10px;
+  border: 1px solid #E4E6EF;
+}
+
+.agent-level-settings .action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.agent-level-settings .table-checkbox {
+  padding: 0 8px;
+}
+
+.css-19kzrtu {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+  padding-top: 0px !important;
+}
+
+.css-1dybbl5-MuiChip-label {
+    font-weight: 500 !important;
+}
+
+/* No 열 스타일 */
+.agent-level-settings .MuiTableCell-root[align="center"]:nth-child(2) {
+  min-width: 50px;
+  padding: 8px 4px;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+/* 테이블 스타일 */
+.agent-level-settings .MuiTable-root {
+  table-layout: fixed;
+  width: 100%;
+  display: table;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.agent-level-settings .MuiTableBody-root {
+  display: table-row-group;
+}
+
+.agent-level-settings .MuiTableRow-root {
+  display: table-row;
+}
+
+.agent-level-settings .MuiTableCell-root {
+  display: table-cell;
+}

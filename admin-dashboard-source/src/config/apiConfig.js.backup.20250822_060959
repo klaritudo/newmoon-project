@@ -1,0 +1,112 @@
+/**
+ * API 설정 - 로컬/외부/프록시 환경 자동 감지
+ */
+
+// 현재 접속 환경 감지
+const isLocalhost = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1';
+
+// IP 주소 패턴 감지 (예: 220.95.232.167)
+const isDirectIP = /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname);
+
+// nginx 프록시 도메인 감지 (qnuta.com 도메인 패턴)
+const isNginxProxy = window.location.hostname.endsWith('.qnuta.com') || 
+                    window.location.hostname === 'qnuta.com';
+
+// 환경별 API URL 설정  
+const getApiBaseUrl = () => {
+  // 환경변수가 있으면 우선 사용
+  if (import.meta.env.VITE_API_URL) {
+    // 개발 환경에서 IP 직접 접속한 경우 직접 API 서버에 연결
+    if (import.meta.env.DEV && isDirectIP && window.location.port === '5173' && import.meta.env.VITE_API_URL === '/api') {
+      const protocol = window.location.protocol;
+      return `${protocol}//${window.location.hostname}:5100/api`;
+    }
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  if (import.meta.env.VITE_API_BASE_URL) {
+    // 개발 환경에서 IP 직접 접속한 경우 직접 API 서버에 연결
+    if (import.meta.env.DEV && isDirectIP && window.location.port === '5173') {
+      const protocol = window.location.protocol;
+      return `${protocol}//${window.location.hostname}:5100/api`;
+    }
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // 1. 로컬호스트 개발 환경 - Vite 프록시 사용
+  if (import.meta.env.DEV && isLocalhost && window.location.port === '5173') {
+    return '/api';
+  }
+  
+  // 2. IP 직접 접속 (개발 서버) - 직접 API 서버 연결
+  if (import.meta.env.DEV && isDirectIP && window.location.port === '5173') {
+    const protocol = window.location.protocol;
+    return `${protocol}//${window.location.hostname}:5100/api`;
+  }
+  
+  // 3. nginx 프록시 도메인 (qnuta.com 패턴) - nginx 프록시 사용
+  if (isNginxProxy) {
+    return '/api';
+  }
+  
+  // 4. 기타 프로덕션 환경 - 기본 프록시 사용
+  return '/api';
+};
+
+const getSocketUrl = () => {
+  // 환경변수가 있으면 우선 사용
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  
+  // 1. 로컬호스트 개발 환경 - Vite 프록시 사용
+  if (import.meta.env.DEV && isLocalhost && window.location.port === '5173') {
+    return '';  // Vite 프록시 사용
+  }
+  
+  // 2. IP 직접 접속 (개발 서버) - 직접 API 서버 연결
+  if (import.meta.env.DEV && isDirectIP && window.location.port === '5173') {
+    const protocol = window.location.protocol;
+    return `${protocol}//${window.location.hostname}:5100`;
+  }
+  
+  // 3. nginx 프록시 도메인 (qnuta.com 패턴) - nginx 프록시 사용
+  if (isNginxProxy) {
+    return '';  // nginx 프록시 사용
+  }
+  
+  // 4. 기타 프로덕션 환경
+  if (isLocalhost) {
+    // localhost 접속 시 프로토콜별 포트 조정
+    const protocol = window.location.protocol;
+    const port = protocol === 'https:' ? '5000' : '5100';
+    return `${protocol}//localhost:${port}`;
+  } else {
+    // 기타 프로덕션 환경 - 현재 origin 사용
+    return '';
+  }
+};
+
+export const API_CONFIG = {
+  BASE_URL: getApiBaseUrl(),
+  SOCKET_URL: getSocketUrl(),
+  IS_LOCALHOST: isLocalhost,
+  IS_DIRECT_IP: isDirectIP,
+  IS_NGINX_PROXY: isNginxProxy,
+  CURRENT_HOST: window.location.hostname
+};
+
+// 디버깅 로그
+console.log('API_CONFIG:', {
+  BASE_URL: API_CONFIG.BASE_URL,
+  SOCKET_URL: API_CONFIG.SOCKET_URL,
+  IS_LOCALHOST: API_CONFIG.IS_LOCALHOST,
+  IS_DIRECT_IP: API_CONFIG.IS_DIRECT_IP,
+  IS_NGINX_PROXY: API_CONFIG.IS_NGINX_PROXY,
+  CURRENT_HOST: API_CONFIG.CURRENT_HOST,
+  PORT: window.location.port,
+  DEV: import.meta.env.DEV
+});
+
+ 

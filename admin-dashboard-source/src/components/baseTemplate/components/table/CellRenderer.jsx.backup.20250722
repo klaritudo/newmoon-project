@@ -1,0 +1,1918 @@
+import React, { useState } from 'react';
+import PropTypes from 'prop-types';
+import {
+  Box,
+  Typography,
+  Button,
+  Chip,
+  Stack,
+  Switch,
+  Select,
+  MenuItem,
+  FormControl,
+  useTheme,
+  Menu,
+  ListItemIcon,
+  ListItemText
+} from '@mui/material';
+import ParentChips from '../ParentChips';
+import TypeTree from './TypeTree';
+import { formatDateKorean, formatDateTime } from '../../../../utils/dateUtils';
+import CasinoIcon from '@mui/icons-material/Casino';
+import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
+import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
+
+/**
+ * 셀 렌더러 컴포넌트
+ * 다양한 타입의 셀을 렌더링합니다.
+ * 
+ * @param {Object} props
+ * @param {Object} props.column - 컬럼 정의
+ * @param {Object} props.row - 행 데이터
+ * @param {any} props.value - 셀 값
+ * @param {boolean} props.sequentialPageNumbers - 연속 페이지 번호 사용 여부
+ * @param {number} props.page - 현재 페이지 (0부터 시작)
+ * @param {number} props.rowsPerPage - 페이지당 행 수
+ * @param {number} props.rowIndex - 현재 페이지 내에서의 행 인덱스
+ */
+const CellRenderer = ({ 
+  column, 
+  row, 
+  value,
+  sequentialPageNumbers = false,
+  page = 0,
+  rowsPerPage = 10,
+  rowIndex = 0
+}) => {
+  const theme = useTheme();
+  
+  // 클릭 핸들러
+  const handleCellClick = (event) => {
+    if (column.clickable && column.onClick) {
+      event.stopPropagation();
+      column.onClick(row);
+    }
+  };
+  
+  
+  // 롤링% 컬럼은 특별 처리
+  if (column.id === 'rollingPercent') {
+    const slotPercent = parseFloat(row.rolling_slot_percent || 0);
+    const casinoPercent = parseFloat(row.rolling_casino_percent || 0);
+    
+    // 롤링% 유효성 정보 확인
+    const isInvalid = row.rollingValidity && !row.rollingValidity.isValid;
+    const invalidReason = row.rollingValidity?.reason || '';
+    const parentInvalid = row.rollingValidity?.parentInvalid || false;
+    
+    // 무효한 경우의 타이틀 텍스트
+    let titleText = '';
+    if (isInvalid) {
+      if (parentInvalid) {
+        titleText = '상위 회원의 롤링%가 유효하지 않아 적용할 수 없습니다';
+      } else {
+        titleText = invalidReason;
+      }
+    }
+    
+    return (
+      <Box sx={{ textAlign: 'center', lineHeight: 1.2 }}>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            display: 'block', 
+            color: isInvalid ? 'error.main' : 'primary.main', 
+            fontSize: '11px',
+            fontWeight: isInvalid ? 'bold' : 'normal',
+            textDecoration: isInvalid ? 'line-through' : 'none'
+          }}
+          title={titleText}
+        >
+          슬롯 {slotPercent.toFixed(2)}%
+        </Typography>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            display: 'block', 
+            color: isInvalid ? 'error.main' : 'secondary.main', 
+            fontSize: '11px',
+            fontWeight: isInvalid ? 'bold' : 'normal',
+            textDecoration: isInvalid ? 'line-through' : 'none'
+          }}
+          title={titleText}
+        >
+          카지노 {casinoPercent.toFixed(2)}%
+        </Typography>
+      </Box>
+    );
+  }
+  
+  // 컬럼 ID로도 타입 처리 (type 속성이 손실된 경우 대비)
+  if (column.id === 'index') {
+    const indexNumber = sequentialPageNumbers 
+      ? (page * rowsPerPage) + rowIndex + 1
+      : rowIndex + 1;
+    return (
+      <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+        {indexNumber}
+      </Typography>
+    );
+  }
+  
+  
+  // 컬럼 타입에 따라 다른 렌더링 처리
+  switch (column.type) {
+    // 인덱스 컬럼 (순번)
+    case 'index':
+      const indexNumber = sequentialPageNumbers 
+        ? (page * rowsPerPage) + rowIndex + 1
+        : rowIndex + 1;
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          {indexNumber}
+        </Typography>
+      );
+    // 이미지 컬럼
+    case 'image':
+      // 컬럼 ID에 따라 다른 스타일 적용
+      const isVendorLogo = column.id === 'vendorLogo';
+      const isGameImage = column.id === 'gameImage';
+      
+      // 크기 설정
+      const imageWidth = isVendorLogo ? 120 : isGameImage ? 210 : 40;
+      const imageHeight = isVendorLogo ? 50 : isGameImage ? 210 : 40;
+      const borderRadius = isVendorLogo || isGameImage ? 1 : '50%';
+      
+      if (!value) {
+        // 기본 아바타 표시
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Box
+              sx={{
+                width: imageWidth,
+                height: imageHeight,
+                borderRadius: borderRadius,
+                backgroundColor: '#e0e0e0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#757575',
+                fontSize: isGameImage ? '24px' : '18px',
+                fontWeight: 'bold',
+                border: '1px solid #e0e0e0'
+              }}
+            >
+              {isVendorLogo ? 'NO LOGO' : isGameImage ? 'NO IMAGE' : '?'}
+            </Box>
+          </Box>
+        );
+      }
+      
+      // 문자열 URL인 경우
+      if (typeof value === 'string') {
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Box
+              component="img"
+              src={value}
+              alt=""
+              sx={{
+                width: imageWidth,
+                height: imageHeight,
+                borderRadius: borderRadius,
+                objectFit: 'contain',
+                border: '1px solid #e0e0e0',
+                backgroundColor: 'white'
+              }}
+              onError={(e) => {
+                // 이미지 로드 실패 시 기본 아바타
+                e.target.style.display = 'none';
+                const fallbackText = isVendorLogo ? 'NO LOGO' : isGameImage ? 'NO IMAGE' : '?';
+                const fallbackFontSize = isGameImage ? '24px' : '18px';
+                e.target.parentElement.innerHTML = `
+                  <div style="
+                    width: ${imageWidth}px;
+                    height: ${imageHeight}px;
+                    border-radius: ${typeof borderRadius === 'number' ? borderRadius + 'px' : borderRadius};
+                    background-color: #e0e0e0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #757575;
+                    font-size: ${fallbackFontSize};
+                    font-weight: bold;
+                    border: 1px solid #e0e0e0;
+                  ">${fallbackText}</div>
+                `;
+              }}
+            />
+          </Box>
+        );
+      }
+      
+      // 객체인 경우 (src와 fallback 또는 bg와 text)
+      if (typeof value === 'object') {
+        // src와 fallback이 있는 경우
+        if (value.src) {
+          return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <Box
+                component="img"
+                src={value.src}
+                alt=""
+                sx={{
+                  width: imageWidth,
+                  height: imageHeight,
+                  borderRadius: borderRadius,
+                  objectFit: 'contain',
+                  border: '1px solid #e0e0e0',
+                  backgroundColor: 'white'
+                }}
+                onError={(e) => {
+                  // fallback 처리
+                  if (value.fallback) {
+                    // fallback 객체가 있는 경우
+                    if (typeof value.fallback === 'object' && value.fallback.bg && value.fallback.text) {
+                      e.target.style.display = 'none';
+                      const fallbackFontSize = isGameImage ? '24px' : isVendorLogo ? '14px' : '16px';
+                      e.target.parentElement.innerHTML = `
+                        <div style="
+                          width: ${imageWidth}px;
+                          height: ${imageHeight}px;
+                          border-radius: ${typeof borderRadius === 'number' ? borderRadius + 'px' : borderRadius};
+                          background-color: ${value.fallback.bg};
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
+                          color: white;
+                          font-size: ${fallbackFontSize};
+                          font-weight: bold;
+                          border: 1px solid #e0e0e0;
+                        ">${value.fallback.text}</div>
+                      `;
+                    }
+                  } else {
+                    // 기본 fallback
+                    e.target.style.display = 'none';
+                    const fallbackText = isVendorLogo ? 'NO LOGO' : isGameImage ? 'NO IMAGE' : '?';
+                    const fallbackFontSize = isGameImage ? '24px' : '18px';
+                    e.target.parentElement.innerHTML = `
+                      <div style="
+                        width: ${imageWidth}px;
+                        height: ${imageHeight}px;
+                        border-radius: ${typeof borderRadius === 'number' ? borderRadius + 'px' : borderRadius};
+                        background-color: #e0e0e0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #757575;
+                        font-size: ${fallbackFontSize};
+                        font-weight: bold;
+                        border: 1px solid #e0e0e0;
+                      ">${fallbackText}</div>
+                    `;
+                  }
+                }}
+              />
+            </Box>
+          );
+        }
+        
+        // bg와 text만 있는 경우 (아바타 스타일)
+        if (value.bg && value.text) {
+          const avatarFontSize = isGameImage ? '24px' : isVendorLogo ? '14px' : '16px';
+          return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <Box
+                sx={{
+                  width: imageWidth,
+                  height: imageHeight,
+                  borderRadius: borderRadius,
+                  backgroundColor: value.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: avatarFontSize,
+                  fontWeight: 'bold',
+                  border: '1px solid #e0e0e0'
+                }}
+              >
+                {value.text}
+              </Box>
+            </Box>
+          );
+        }
+      }
+      
+      // 기본 fallback
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              backgroundColor: '#e0e0e0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#757575',
+              fontSize: '18px',
+              fontWeight: 'bold'
+            }}
+          >
+            ?
+          </Box>
+        </Box>
+      );
+    
+    // 번호 컬럼 (No.)
+    case 'number':
+      // 번호 계산 로직 
+      let displayNumber;
+      
+      if (sequentialPageNumbers) {
+        // 연속 번호 모드: 페이지에 상관없이 연속된 번호 표시
+        // row.index 값은 무시하고 항상 계산된 값 사용
+        displayNumber = page * rowsPerPage + rowIndex + 1;
+      } else {
+        // 페이지별 번호 모드: 각 페이지마다 1부터 시작
+        displayNumber = rowIndex + 1;
+      }
+      
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          {displayNumber || '-'}
+        </Typography>
+      );
+    
+    // Boolean 컬럼 (활성/비활성 등)
+    case 'boolean':
+      const booleanLabel = value ? '활성' : '비활성';
+      const booleanColor = value ? 'success' : 'default';
+      
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <Chip
+            label={booleanLabel}
+            size="small"
+            color={booleanColor}
+            variant="filled"
+            sx={{ maxWidth: '100%' }}
+          />
+        </Box>
+      );
+    
+    // 토글 스위치 컬럼 (활성/비활성 등)
+    case 'toggle':
+      // 숫자(0, 1)를 boolean으로 명확하게 변환
+      const isChecked = value === 1 || value === true || value === 'true';
+      
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <Switch
+            checked={isChecked}
+            size="small"
+            color="primary"
+            onChange={(event) => {
+              // 토글 변경 이벤트 처리
+              // console.log('토글 변경:', row.id, event.target.checked);
+              // 여기서 상위 컴포넌트로 변경 이벤트를 전달할 수 있습니다
+              if (column.onToggle) {
+                column.onToggle(row, event.target.checked);
+              }
+            }}
+          />
+        </Box>
+      );
+    
+    // 멀티라인 텍스트 컬럼 (줄바꿈 지원)
+    case 'multiline':
+      // bankInfo 포맷 처리
+      if (column.format === 'bankInfo' && typeof value === 'object' && value !== null) {
+        if (value.bankName && value.accountNumber && value.accountHolder) {
+          return (
+            <Box sx={{ textAlign: 'center', width: '100%' }}>
+              <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 'bold' }}>
+                {value.bankName} {value.accountNumber}
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                ({value.accountHolder})
+              </Typography>
+            </Box>
+          );
+        } else {
+          return (
+            <Typography variant="body2" sx={{ textAlign: 'center', width: '100%', color: 'text.secondary' }}>
+              -
+            </Typography>
+          );
+        }
+      }
+      
+      // 값이 객체인 경우 (userId 컬럼의 특별한 처리)
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        // type, status 등 label이 있는 객체 처리
+        if (value.label) {
+          return (
+            <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+              {value.label}
+            </Typography>
+          );
+        }
+        if (column.id === 'userId' || column.id === 'memberInfo') {
+          if (value.id && value.nickname) {
+            // 회원관리와 동일한 방식으로 표시
+            return (
+              <Box 
+                onClick={column.clickable ? handleCellClick : undefined}
+                sx={{
+                  cursor: column.clickable ? 'pointer' : 'default',
+                  '&:hover': column.clickable ? {
+                    backgroundColor: 'action.hover',
+                    borderRadius: 1
+                  } : {},
+                  width: '100%',
+                  padding: '4px'
+                }}
+              >
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    lineHeight: 1.2
+                  }}
+                >
+                  {value.id}
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '12px', 
+                    color: '#9e9e9e',
+                    fontWeight: 'normal',
+                    lineHeight: 1.2
+                  }}
+                >
+                  ({value.nickname})
+                </Typography>
+              </Box>
+            );
+          } else {
+            // 기타 객체인 경우 JSON.stringify 사용
+            const displayValue = JSON.stringify(value);
+            return (
+              <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+                {displayValue}
+              </Typography>
+            );
+          }
+        } else {
+          // 다른 컬럼의 객체인 경우 안전하게 문자열로 변환
+          try {
+            const displayValue = value.toString && typeof value.toString === 'function' && value.toString() !== '[object Object]' 
+              ? value.toString() 
+              : JSON.stringify(value);
+            return (
+              <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+                {displayValue}
+              </Typography>
+            );
+          } catch (error) {
+            // console.warn('객체를 문자열로 변환하는 중 오류 발생:', error, value);
+            return (
+              <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+                [객체]
+              </Typography>
+            );
+          }
+        }
+      }
+      
+      // 값이 배열인 경우
+      if (Array.isArray(value)) {
+        // userId 컬럼의 배열 처리
+        if (column.id === 'userId' || column.id === 'memberInfo') {
+          if (value.length > 1) {
+            // 회원관리와 동일한 방식으로 표시
+            return (
+              <Box 
+                onClick={column.clickable ? handleCellClick : undefined}
+                sx={{
+                  cursor: column.clickable ? 'pointer' : 'default',
+                  '&:hover': column.clickable ? {
+                    backgroundColor: 'action.hover',
+                    borderRadius: 1
+                  } : {},
+                  width: '100%',
+                  padding: '4px'
+                }}
+              >
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    lineHeight: 1.2
+                  }}
+                >
+                  {value[0]}
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '12px', 
+                    color: '#9e9e9e',
+                    fontWeight: 'normal',
+                    lineHeight: 1.2
+                  }}
+                >
+                  ({value[1]})
+                </Typography>
+              </Box>
+            );
+          } else {
+            return (
+              <Typography variant="body2" sx={{ textAlign: 'center', width: '100%', fontWeight: 'bold', fontSize: '14px' }}>
+                {value[0] || ''}
+              </Typography>
+            );
+          }
+        }
+        
+        // 일반 배열 처리
+        return (
+          <Stack spacing={0.5} alignItems="center">
+            {value.map((item, index) => (
+              <Typography key={`${column.id}-${row.id || rowIndex}-${index}`} variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+                {item}
+              </Typography>
+            ))}
+          </Stack>
+        );
+      }
+      
+      // 값이 문자열인 경우 줄바꿈 문자로 분리
+      if (typeof value === 'string' && value.includes('\n')) {
+        const lines = value.split('\n');
+        
+        // memberInfo, writer, created_by 컬럼인 경우 회원관리와 동일한 방식으로 표시
+        if (column.id === 'memberInfo' || column.id === 'writer' || column.id === 'created_by') {
+          return (
+            <Box 
+              onClick={column.clickable ? handleCellClick : undefined}
+              sx={{
+                cursor: column.clickable ? 'pointer' : 'default',
+                '&:hover': column.clickable ? {
+                  backgroundColor: 'action.hover',
+                  borderRadius: 1
+                } : {},
+                width: '100%',
+                padding: '4px'
+              }}
+            >
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  lineHeight: 1.2
+                }}
+              >
+                {lines[0]}
+              </Typography>
+              {lines[1] && (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '12px', 
+                    color: '#9e9e9e',
+                    fontWeight: 'normal',
+                    lineHeight: 1.2
+                  }}
+                >
+                  {lines[1]}
+                </Typography>
+              )}
+            </Box>
+          );
+        }
+        
+        // 다른 컬럼의 경우 기존 방식
+        return (
+          <Stack spacing={0.5} alignItems="center">
+            {lines.map((line, index) => (
+              <Typography 
+                key={`${column.id}-${row.id || rowIndex}-line-${index}`} 
+                variant="body2" 
+                sx={{ 
+                  textAlign: 'center !important', 
+                  width: '100%',
+                  fontWeight: index === 0 ? 'bold' : 'normal', // 첫 번째 줄은 굵게 (아이디)
+                  fontSize: index === 0 ? '16px' : '14px', // 첫 번째 줄은 좀 더 크게
+                  color: index === 0 ? 'inherit' : '#9e9e9e' // 두 번째 줄은 회색 (닉네임)
+                }}
+              >
+                {line}
+              </Typography>
+            ))}
+          </Stack>
+        );
+      }
+      
+      // 기본 렌더링
+      const multilineCellContent = (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          {value || '-'}
+        </Typography>
+      );
+      
+      // 클릭 가능한 경우 클릭 핸들러 추가
+      if (column.clickable) {
+        return (
+          <Box
+            onClick={handleCellClick}
+            sx={{
+              cursor: 'pointer',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+                borderRadius: 1
+              },
+              width: '100%',
+              padding: '4px'
+            }}
+          >
+            {multilineCellContent}
+          </Box>
+        );
+      }
+      
+      return multilineCellContent;
+    
+    // 통화(금액) 컬럼
+    case 'currency':
+      if (value === undefined || value === null) return '-';
+      
+      // 숫자가 아닌 경우 그대로 표시
+      if (typeof value !== 'number') {
+        return (
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              textAlign: 'center !important', 
+              width: '100%',
+              fontWeight: 500
+            }}
+          >
+            {value}
+          </Typography>
+        );
+      }
+      
+      // 숫자를 통화 형식으로 포맷
+      const formattedValue = value.toLocaleString('ko-KR');
+      
+      return (
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            textAlign: 'center !important', 
+            width: '100%',
+            fontWeight: 500,
+            color: value < 0 ? 'error.main' : 'inherit'
+          }}
+        >
+          {formattedValue}
+        </Typography>
+      );
+    
+    // 퍼센트 컬럼
+    case 'percent':
+      if (value === undefined || value === null) return '-';
+      
+      // 문자열인 경우 (이미 % 포함)
+      if (typeof value === 'string') {
+        return (
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              textAlign: 'center !important', 
+              width: '100%',
+              fontWeight: 500
+            }}
+          >
+            {value}%
+          </Typography>
+        );
+      }
+      
+      // 숫자인 경우
+      if (typeof value === 'number') {
+        return (
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              textAlign: 'center !important', 
+              width: '100%',
+              fontWeight: 500
+            }}
+          >
+            {value.toFixed(2)}%
+          </Typography>
+        );
+      }
+      
+      return '-';
+    
+    // 칩 스타일 컬럼
+    case 'chip':
+      // render 함수가 있으면 먼저 호출
+      if (column.render && typeof column.render === 'function') {
+        const renderResult = column.render(row);
+        if (renderResult) {
+          value = renderResult;
+        }
+      }
+      
+      if (!value) return '-';
+      
+      
+      // 접속상태 컬럼인 경우
+      if (column.id === 'connectionStatus') {
+        let chipColor = 'default';
+        let chipVariant = 'outlined';
+        let chipLabel = '오프라인';
+        let chipBgColor = '#e0e0e0';
+        let chipBorderColor = '#757575';
+        
+        switch (value) {
+          case 'online':
+          case '온라인':
+            chipLabel = '온라인';
+            chipColor = 'success';
+            chipBgColor = '#e8f5e9';
+            chipBorderColor = '#2e7d32';
+            break;
+          case 'gaming':
+          case '게임중':
+            chipLabel = '게임중';
+            chipColor = 'primary';
+            chipBgColor = '#e3f2fd';
+            chipBorderColor = '#1976d2';
+            break;
+          case 'offline':
+          case '오프라인':
+          default:
+            chipLabel = '오프라인';
+            chipColor = 'default';
+            chipBgColor = '#f5f5f5';
+            chipBorderColor = '#9e9e9e';
+            break;
+        }
+        
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Chip
+              label={chipLabel}
+              size="small"
+              color={chipColor}
+              variant={chipVariant}
+              sx={{ 
+                maxWidth: '100%',
+                backgroundColor: chipBgColor,
+                borderColor: chipBorderColor,
+                color: chipBorderColor,
+                fontWeight: 'medium',
+                '&:hover': {
+                  backgroundColor: chipBgColor
+                }
+              }}
+            />
+          </Box>
+        );
+      }
+      
+      // 값이 배열인 경우 여러 칩 렌더링
+      if (Array.isArray(value)) {
+        return (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="center">
+            {value.map((item, index) => {
+              // item이 문자열인지 객체인지 확인
+              const isItemObject = typeof item === 'object' && item !== null;
+              const itemLabel = isItemObject ? (item.label || '') : item;
+              const itemColor = isItemObject ? (item.color || 'primary') : 'primary';
+              const itemVariant = isItemObject ? (item.variant || 'filled') : 'filled';
+              const itemBgColor = isItemObject ? item.backgroundColor : undefined;
+              const itemBorderColor = isItemObject ? item.borderColor : undefined;
+              
+              return (
+                <Chip
+                  key={`${column.id}-${row.id || rowIndex}-chip-${index}`}
+                  label={itemLabel}
+                  size="small"
+                  color={itemColor}
+                  variant={itemVariant}
+                  sx={{ 
+                    margin: '2px', 
+                    maxWidth: '100%',
+                    backgroundColor: itemBgColor || undefined,
+                    borderColor: itemBorderColor || undefined,
+                    color: itemBorderColor || undefined,
+                    border: itemBorderColor ? `1px solid ${itemBorderColor}` : undefined,
+                    '& .MuiChip-label': {
+                      color: itemBorderColor || undefined
+                    }
+                  }}
+                />
+              );
+            })}
+          </Stack>
+        );
+      }
+      
+      // 단일 칩 렌더링
+      // value가 문자열인지 객체인지 확인
+      const isObject = typeof value === 'object' && value !== null;
+      const chipLabel = isObject ? (value.label || '') : value;
+      const chipColor = isObject ? (value.color || 'primary') : 'primary';
+      const chipVariant = isObject ? (value.variant || 'filled') : 'filled';
+      
+      // MUI 기본 색상을 사용하는 경우와 커스텀 색상을 사용하는 경우 구분
+      const useCustomColors = isObject && (value.backgroundColor || value.borderColor);
+      
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <Chip
+            label={chipLabel}
+            size="small"
+            color={useCustomColors ? 'default' : chipColor}
+            variant={chipVariant}
+            sx={useCustomColors ? { 
+              maxWidth: '100%',
+              backgroundColor: value.backgroundColor,
+              borderColor: value.borderColor,
+              color: value.borderColor,
+              border: value.borderColor ? `1px solid ${value.borderColor}` : undefined,
+              '& .MuiChip-label': {
+                color: value.borderColor
+              },
+              '&.MuiChip-filled': {
+                backgroundColor: `${value.backgroundColor} !important`,
+                color: `${value.borderColor} !important`,
+                border: value.borderColor ? `1px solid ${value.borderColor} !important` : undefined,
+              },
+              '&:hover': {
+                backgroundColor: `${value.backgroundColor} !important`,
+              }
+            } : {
+              maxWidth: '100%',
+              fontWeight: 'medium'
+            }}
+          />
+        </Box>
+      );
+    
+    // 버튼 컬럼
+    case 'button':
+      // 단일 버튼인 경우 (buttonText와 onClick이 있는 경우)
+      if (!column.buttons && (column.buttonText || column.onClick)) {
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (column.onClick) {
+                  column.onClick(row);
+                }
+              }}
+            >
+              {column.buttonText || '버튼'}
+            </Button>
+          </Box>
+        );
+      }
+      
+      // 다중 버튼인 경우
+      if (!column.buttons || !column.buttons.length) {
+        return null;
+      }
+      
+      return (
+        <Stack direction={column.buttonDirection || 'row'} spacing={1} justifyContent="center">
+          {column.buttons.map((button, index) => {
+            // show 함수가 있으면 조건 체크
+            if (button.show && typeof button.show === 'function') {
+              const shouldShow = button.show(row);
+              if (!shouldShow) {
+                return null;
+              }
+            }
+            
+            return (
+              <Button
+                key={`${column.id}-${row.id || rowIndex}-btn-${index}`}
+                variant={button.variant || 'outlined'}
+                color={button.color || 'primary'}
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // button.onClick 우선, onActionClick 백업
+                  if (button.onClick) {
+                    button.onClick(row);
+                  } else if (column.onActionClick) {
+                    column.onActionClick(button.type, row);
+                  }
+                }}
+              >
+                {button.label}
+              </Button>
+            );
+          })}
+        </Stack>
+      );
+    
+    // 액션 버튼들 (여러 버튼)
+    case 'actions':
+      if (!column.actions || !column.actions.length) {
+        return null;
+      }
+      
+      return (
+        <Stack direction="row" spacing={0.5} justifyContent="center">
+          {column.actions.map((action, index) => {
+            if (action.type === 'button') {
+              return (
+                <Button
+                  key={`${column.id}-${row.id || rowIndex}-action-${index}`}
+                  variant={action.variant || 'outlined'}
+                  color={action.color || 'primary'}
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (action.onClick) {
+                      action.onClick(row);
+                    }
+                  }}
+                  sx={{ minWidth: 'auto', px: 1 }}
+                >
+                  {action.buttonText || action.label || '액션'}
+                </Button>
+              );
+            }
+            return null;
+          })}
+        </Stack>
+      );
+    
+    // 드롭다운 컬럼
+    case 'dropdown':
+      // 계층단계 드롭다운인 경우 - 이동 불가, 읽기 전용으로 표시
+      if (column.dropdownType === 'hierarchy') {
+        const currentLevel = value || 1;
+        
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Chip
+              label={currentLevel}
+              size="small"
+              sx={{
+                fontWeight: 'medium',
+                backgroundColor: 'action.hover',
+                cursor: 'not-allowed',
+                '&:hover': {
+                  backgroundColor: 'action.hover'
+                }
+              }}
+            />
+          </Box>
+        );
+      }
+      
+      // API 드롭다운인 경우
+      if (column.id === 'api') {
+        const apiOptions = column.dropdownOptions || [
+          { value: 'Honor API', label: 'Honor API' },
+          { value: 'disabled', label: '비활성' }
+        ];
+        
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <Select
+                value={row.api || value || 'Honor API'}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  const newApi = e.target.value;
+                  // console.log('API 변경:', row.id, newApi);
+                  
+                  // 상위 컴포넌트로 변경 이벤트 전달
+                  if (column.onApiChange) {
+                    column.onApiChange(row, newApi);
+                  }
+                }}
+                sx={{
+                  '& .MuiSelect-select': {
+                    padding: '4px 8px',
+                    textAlign: 'center'
+                  }
+                }}
+              >
+                {apiOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        );
+      }
+      
+      // 기본 드롭다운 렌더링
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          {value || '-'}
+        </Typography>
+      );
+    
+    // 계층형 컬럼
+    case 'hierarchical':
+      // TypeTree 컴포넌트를 사용하여 계층형 렌더링
+      if (column.cellRenderer === 'chip' && value) {
+        // 행의 계층 정보 추출
+        const level = row.level || 0;
+        const hasChildren = row.children && row.children.length > 0;
+        const expanded = row.expanded !== undefined ? row.expanded : true;
+        
+        // 유형 정보 추출
+        let typeInfo = {};
+        if (typeof value === 'object') {
+          typeInfo = {
+            label: value.label || value.id || '',
+            color: value.color || 'primary',
+            backgroundColor: value.backgroundColor,
+            borderColor: value.borderColor
+          };
+        } else {
+          typeInfo = {
+            label: value,
+            color: 'primary'
+          };
+        }
+        
+        return (
+          <TypeTree
+            item={row}
+            level={level}
+            expanded={expanded}
+            onToggle={(itemId) => {
+              // 확장/축소 토글 이벤트 발생
+              // console.log('TypeTree 토글:', itemId);
+              if (column.onToggle) {
+                column.onToggle(itemId);
+              }
+            }}
+            hasChildren={hasChildren}
+            typeInfo={typeInfo}
+            indentMode={true} // 기본적으로 들여쓰기 모드 활성화
+            showToggleIcon={true}
+            />
+        );
+      }
+      
+      // 기본 텍스트로 렌더링
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          {value || '-'}
+        </Typography>
+      );
+    
+    // 가로 정렬 컬럼 (상위 계층 목록 등)
+    case 'horizontal':
+      if (!value) return '-';
+      
+      // parentTypes 또는 superAgent 데이터인 경우 ParentChips 컴포넌트 사용
+      if (column.id === 'parentType' || column.id === 'parentTypes' || column.id === 'superAgent') {
+        return (
+          <ParentChips 
+            parentTypes={value} 
+            direction="row"
+            maxChips={8}
+            sx={{ justifyContent: 'flex-start' }}
+          />
+        );
+      }
+      
+      // 값이 배열인 경우 가로로 나열
+      if (Array.isArray(value)) {
+        return (
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="center">
+            {value.map((item, index) => {
+              // 칩 스타일로 렌더링
+              if (column.cellRenderer === 'chip') {
+                return (
+                  <Chip
+                    key={index}
+                    label={item.label || item}
+                    size="small"
+                    color={item.color || 'primary'}
+                    variant={item.variant || 'filled'}
+                    sx={{ 
+                      margin: '2px',
+                      backgroundColor: item.backgroundColor || undefined,
+                      borderColor: item.borderColor || undefined,
+                      color: item.borderColor || undefined,
+                      border: item.borderColor ? `1px solid ${item.borderColor}` : undefined,
+                      '& .MuiChip-label': {
+                        color: item.borderColor || undefined
+                      }
+                    }}
+                  />
+                );
+              }
+              
+              // 구분자로 구분된 텍스트
+              return (
+                <React.Fragment key={`${column.id}-${row.id || rowIndex}-frag-${index}`}>
+                  {index > 0 && <Typography variant="body2" sx={{ mx: 0.5, textAlign: 'center !important' }}>•</Typography>}
+                  <Typography variant="body2" sx={{ textAlign: 'center !important' }}>
+                    {item.label || item}
+                  </Typography>
+                </React.Fragment>
+              );
+            })}
+          </Stack>
+        );
+      }
+      
+      // 단일 값 렌더링
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          {value}
+        </Typography>
+      );
+    
+    // 커스텀 렌더러
+    case 'custom':
+      // gameMoneyWithButton 커스텀 렌더러
+      if (column.customRenderer === 'gameMoneyWithButton') {
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+            <Typography variant="body2">
+              {`${Number(value || 0).toLocaleString()}원`}
+            </Typography>
+            {value > 0 && (
+              <Button
+                size="small"
+                variant="contained"
+                sx={{ 
+                  padding: '2px 6px', 
+                  fontSize: '10px', 
+                  backgroundColor: '#1976d2', 
+                  minWidth: '30px',
+                  '&:hover': {
+                    backgroundColor: '#1565c0'
+                  }
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.handleGameMoneyTransfer) {
+                    window.handleGameMoneyTransfer(row.username, value);
+                  }
+                }}
+                title="보유금으로 전환"
+              >
+                전환
+              </Button>
+            )}
+          </Box>
+        );
+      }
+      
+      // rollingAmountWithButton 커스텀 렌더러
+      if (column.customRenderer === 'rollingAmountWithButton') {
+        const slotAmount = parseFloat(row.rolling_slot_amount || 0);
+        const casinoAmount = parseFloat(row.rolling_casino_amount || 0);
+        const totalAmount = slotAmount + casinoAmount;
+        
+        // 메뉴 상태 관리를 위한 로컬 상태
+        const [anchorEl, setAnchorEl] = React.useState(null);
+        const open = Boolean(anchorEl);
+        
+        const handleClick = (event) => {
+          event.stopPropagation();
+          setAnchorEl(event.currentTarget);
+        };
+        
+        const handleClose = () => {
+          setAnchorEl(null);
+        };
+        
+        const handleTransfer = (transferType) => {
+          handleClose();
+          if (window.handleRollingTransfer) {
+            window.handleRollingTransfer(row.id, transferType);
+          }
+        };
+        
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="caption" sx={{ display: 'block', fontSize: '11px', color: 'primary.main' }}>
+                슬롯: {slotAmount.toLocaleString()}원
+              </Typography>
+              <Typography variant="caption" sx={{ display: 'block', fontSize: '11px', color: 'secondary.main' }}>
+                카지노: {casinoAmount.toLocaleString()}원
+              </Typography>
+            </Box>
+            {totalAmount > 0 && (
+              <>
+                <Button
+                  size="small"
+                  variant="contained"
+                  sx={{ 
+                    padding: '2px 6px', 
+                    fontSize: '10px', 
+                    backgroundColor: '#9c27b0', 
+                    minWidth: '30px',
+                    '&:hover': {
+                      backgroundColor: '#7b1fa2'
+                    }
+                  }}
+                  onClick={handleClick}
+                  title="보유금으로 전환"
+                >
+                  전환
+                </Button>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={open}
+                  onClose={handleClose}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                >
+                  {slotAmount > 0 && (
+                    <MenuItem onClick={() => handleTransfer('slot')}>
+                      <ListItemIcon>
+                        <SportsEsportsIcon fontSize="small" color="primary" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="슬롯 전환" 
+                        secondary={`${slotAmount.toLocaleString()}원`}
+                      />
+                    </MenuItem>
+                  )}
+                  {casinoAmount > 0 && (
+                    <MenuItem onClick={() => handleTransfer('casino')}>
+                      <ListItemIcon>
+                        <CasinoIcon fontSize="small" color="secondary" />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="카지노 전환" 
+                        secondary={`${casinoAmount.toLocaleString()}원`}
+                      />
+                    </MenuItem>
+                  )}
+                  {slotAmount > 0 && casinoAmount > 0 && (
+                    <MenuItem onClick={() => handleTransfer('all')}>
+                      <ListItemIcon>
+                        <AllInclusiveIcon fontSize="small" sx={{ color: '#9c27b0' }} />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary="모두 전환" 
+                        secondary={`${totalAmount.toLocaleString()}원`}
+                      />
+                    </MenuItem>
+                  )}
+                </Menu>
+              </>
+            )}
+          </Box>
+        );
+      }
+      
+      // parentChips 커스텀 렌더러 처리
+      if (column.cellRenderer === 'parentChips') {
+        return (
+          <ParentChips 
+            parentTypes={value} 
+            direction="row"
+            maxChips={8}
+            sx={{ justifyContent: 'flex-start' }}
+          />
+        );
+      }
+      
+      // column.render 함수가 있는 경우 호출
+      if (column.render && typeof column.render === 'function') {
+        const rendered = column.render(row);
+        // render 함수가 React 요소를 반환한 경우
+        if (React.isValidElement(rendered)) {
+          return rendered;
+        }
+        // render 함수가 값을 반환한 경우
+        value = rendered;
+      }
+      
+      // levelTypeChip 커스텀 렌더러
+      if (column.customRenderer === 'levelTypeChip') {
+        if (!value) return '-';
+        
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Chip
+              label={value}
+              size="small"
+              sx={{
+                backgroundColor: `${row.backgroundColor || '#e8f5e9'} !important`,
+                color: `${row.borderColor || '#2e7d32'} !important`,
+                border: `1px solid ${row.borderColor || '#2e7d32'} !important`,
+                fontWeight: 400,
+                borderRadius: '50px',
+                padding: '0 8px',
+                height: '28px',
+                fontSize: '0.8rem',
+                maxWidth: '100%',
+                '&:hover': {
+                  backgroundColor: `${row.backgroundColor || '#e8f5e9'} !important`,
+                }
+              }}
+            />
+          </Box>
+        );
+      }
+      
+      // rollingPercent 커스텀 렌더러
+      if (column.customRenderer === 'rollingPercent') {
+        const slotPercent = row.rolling_slot_percent || row.rollingPercent || 0;
+        const casinoPercent = row.rolling_casino_percent || row.rollingPercent || 0;
+        
+        // 디버깅
+        if (row.username === 'branch00005') {
+          console.log('branch00005 롤링% 데이터:', {
+            slot_percent: row.slot_percent,
+            casino_percent: row.casino_percent,
+            rolling_slot_percent: row.rolling_slot_percent,
+            rolling_casino_percent: row.rolling_casino_percent
+          });
+        }
+        
+        
+        return (
+          <Box sx={{ textAlign: 'center', lineHeight: 1.2 }}>
+            <Typography variant="caption" sx={{ display: 'block', color: 'primary.main' }}>
+              슬롯 {slotPercent}%
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', color: 'secondary.main' }}>
+              카지노 {casinoPercent}%
+            </Typography>
+          </Box>
+        );
+      }
+      
+      // 기본 커스텀 렌더링
+      // value가 React 요소인 경우 그대로 반환
+      if (React.isValidElement(value)) {
+        return value;
+      }
+      
+      // value가 문자열이나 숫자인 경우만 Typography로 감싸기
+      if (typeof value === 'string' || typeof value === 'number') {
+        return (
+          <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+            {value || '-'}
+          </Typography>
+        );
+      }
+      
+      // 그 외의 경우 빈 값 반환
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          -
+        </Typography>
+      );
+
+    // 베팅일자 컬럼 (베팅과 처리 라벨은 칩 스타일, 일시는 한 줄로 표시)
+    case 'betting_date':
+      if (!value || typeof value !== 'object') {
+        return (
+          <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+            -
+          </Typography>
+        );
+      }
+      
+      const formatBettingDateTime = (dateString) => {
+        return formatDateKorean(dateString, true);
+      };
+      
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, width: '100%' }}>
+          {/* 베팅 일시 - 칩과 일시를 한 줄로 */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              label="베팅"
+              size="small"
+              sx={{
+                backgroundColor: 'info.light',
+                color: 'info.contrastText',
+                fontWeight: 'bold',
+                fontSize: '11px',
+                height: '22px',
+                minWidth: '40px',
+                '& .MuiChip-label': {
+                  px: 1,
+                  fontSize: '11px',
+                  fontWeight: 'bold'
+                }
+              }}
+            />
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: '16px', 
+                fontWeight: 'medium',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {formatBettingDateTime(value.betting)}
+            </Typography>
+          </Box>
+          
+          {/* 처리 일시 - 칩과 일시를 한 줄로 (처리 시간이 있을 때만 표시) */}
+          {value.process && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip
+                label="처리"
+                size="small"
+                sx={{
+                  backgroundColor: 'success.light',
+                  color: 'success.contrastText',
+                  fontWeight: 'bold',
+                  fontSize: '11px',
+                  height: '22px',
+                  minWidth: '40px',
+                  '& .MuiChip-label': {
+                    px: 1,
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                  }
+                }}
+              />
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontSize: '16px', 
+                  fontWeight: 'medium',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {formatBettingDateTime(value.process)}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      );
+
+    // 베팅정보 컬럼 (각 항목을 칩 스타일로 표시)
+    case 'betting_info':
+      if (!value || typeof value !== 'object') {
+        return (
+          <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+            -
+          </Typography>
+        );
+      }
+      
+      const formatAmount = (amount) => {
+        return typeof amount === 'number' ? amount.toLocaleString() : '-';
+      };
+      
+      return (
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 1fr',
+          gridTemplateRows: '1fr 1fr',
+          gap: 1,
+          width: '100%',
+          padding: '4px'
+        }}>
+          {/* 첫 번째 행 */}
+          <Chip
+            label={`베팅전 ${formatAmount(value.before)}`}
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(255, 152, 0, 0.15)', // 오렌지 반투명
+              color: '#e65100',
+              border: '1px solid rgba(255, 152, 0, 0.4)',
+              fontSize: '13px',
+              fontWeight: 'medium',
+              height: '32px',
+              '& .MuiChip-label': {
+                fontSize: '13px',
+                fontWeight: 'medium'
+              }
+            }}
+          />
+          <Chip
+            label={`베팅금 ${formatAmount(value.betAmount)}`}
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(33, 150, 243, 0.15)', // 파랑 반투명
+              color: '#1565c0',
+              border: '1px solid rgba(33, 150, 243, 0.4)',
+              fontSize: '13px',
+              fontWeight: 'medium',
+              height: '32px',
+              '& .MuiChip-label': {
+                fontSize: '13px',
+                fontWeight: 'medium'
+              }
+            }}
+          />
+          {/* 두 번째 행 */}
+          <Chip
+            label={`당첨금 ${formatAmount(value.winAmount)}`}
+            size="small"
+            sx={{
+              backgroundColor: value.winAmount > 0 ? 'rgba(76, 175, 80, 0.15)' : 'rgba(158, 158, 158, 0.15)', // 초록/회색 반투명
+              color: value.winAmount > 0 ? '#2e7d32' : '#616161',
+              border: value.winAmount > 0 ? '1px solid rgba(76, 175, 80, 0.4)' : '1px solid rgba(158, 158, 158, 0.4)',
+              fontSize: '13px',
+              fontWeight: 'medium',
+              height: '32px',
+              '& .MuiChip-label': {
+                fontSize: '13px',
+                fontWeight: 'medium'
+              }
+            }}
+          />
+          <Chip
+            label={`베팅후 ${formatAmount(value.after)}`}
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(156, 39, 176, 0.15)', // 보라 반투명
+              color: '#7b1fa2',
+              border: '1px solid rgba(156, 39, 176, 0.4)',
+              fontSize: '13px',
+              fontWeight: 'medium',
+              height: '32px',
+              '& .MuiChip-label': {
+                fontSize: '13px',
+                fontWeight: 'medium'
+              }
+            }}
+          />
+        </Box>
+      );
+
+    // 베팅 액션 컬럼 (공베팅 버튼들)
+    case 'betting_action':
+      // value가 'applied', 'cancelled', null 중 하나
+      if (!value) {
+        return (
+          <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%', color: 'text.disabled' }}>
+            -
+          </Typography>
+        );
+      }
+      
+      if (value === 'applied') {
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Button
+              variant="outlined"
+              size="small"
+              color="error"
+              onClick={(event) => {
+                event.stopPropagation();
+                // console.log('공베팅취소 클릭:', row);
+                if (column.onVoidCancel) {
+                  column.onVoidCancel(row);
+                }
+              }}
+            >
+              공베팅취소
+            </Button>
+          </Box>
+        );
+      } else if (value === 'cancelled') {
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Button
+              variant="outlined"
+              size="small"
+              color="primary"
+              onClick={(event) => {
+                event.stopPropagation();
+                // console.log('공베팅적용 클릭:', row);
+                if (column.onVoidApply) {
+                  column.onVoidApply(row);
+                }
+              }}
+            >
+              공베팅적용
+            </Button>
+          </Box>
+        );
+      }
+      
+      // 기본적으로 공베팅적용 버튼 표시
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <Button
+            variant="outlined"
+            size="small"
+            color="primary"
+            onClick={(event) => {
+              event.stopPropagation();
+              // console.log('공베팅적용 클릭:', row);
+              if (column.onVoidApply) {
+                column.onVoidApply(row);
+              }
+            }}
+          >
+            공베팅적용
+          </Button>
+        </Box>
+      );
+    
+    // 날짜 컬럼 (날짜만)
+    case 'date':
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          {formatDateKorean(value, false)}
+        </Typography>
+      );
+    
+    // 날짜시간 컬럼 (날짜 + 시간)
+    case 'datetime':
+      // 디버깅용 로그
+      if (column.id === 'created_at' || column.id === 'updated_at' || column.id === 'start_date' || column.id === 'end_date') {
+        console.log(`[CellRenderer] ${column.id}:`, value, '→', formatDateKorean(value, true));
+      }
+      return (
+        <Typography variant="body2" sx={{ textAlign: 'center !important', width: '100%' }}>
+          {formatDateKorean(value, true)}
+        </Typography>
+      );
+    
+    // 상태 컬럼 (회원가입요청 상태)
+    case 'status':
+      const statusStyles = {
+        pending: { backgroundColor: '#FFE2E5', color: '#F64E60' },
+        waiting: { backgroundColor: '#FFF4DE', color: '#FFA800' },
+        rejected: { backgroundColor: '#EEE5FF', color: '#8950FC' }
+      };
+      const statusLabels = {
+        pending: '요청 중',
+        waiting: '대기',
+        rejected: '비승인'
+      };
+      const currentStyle = statusStyles[value] || { backgroundColor: '#f5f5f5', color: '#666' };
+      const label = statusLabels[value] || value || '-';
+      
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <Chip
+            label={label}
+            size="small"
+            sx={{
+              backgroundColor: currentStyle.backgroundColor,
+              color: currentStyle.color,
+              fontWeight: 600,
+              fontSize: '12px',
+              height: '24px',
+              '& .MuiChip-label': {
+                px: 1.5
+              }
+            }}
+          />
+        </Box>
+      );
+    
+    // 기본 텍스트 컬럼
+    default:
+      // buttons 속성이 있는 경우 (액션 버튼들)
+      if (column.buttons && Array.isArray(column.buttons)) {
+        return (
+          <Stack direction="row" spacing={0.5} justifyContent="center">
+            {column.buttons.map((button, index) => {
+              // show 함수가 있으면 조건 체크
+              if (button.show && typeof button.show === 'function') {
+                const shouldShow = button.show(row);
+                if (!shouldShow) {
+                  return null;
+                }
+              }
+              
+              return (
+                <Button
+                  key={`${column.id}-${row.id || rowIndex}-btn-${index}`}
+                  variant={button.variant || 'outlined'}
+                  color={button.color || 'primary'}
+                  size={button.size || 'small'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // button.onClick 우선, onActionClick 백업
+                    if (button.onClick) {
+                      button.onClick(row);
+                    } else if (column.onActionClick) {
+                      column.onActionClick(button.type, row);
+                    }
+                  }}
+                  sx={{ minWidth: 'auto', px: 1 }}
+                >
+                  {button.label}
+                </Button>
+              );
+            })}
+          </Stack>
+        );
+      }
+      // customRenderer가 있는 경우 처리
+      if (column.customRenderer === 'rollingPercent') {
+        const slotPercent = row.rolling_slot_percent || row.rollingPercent || 0;
+        const casinoPercent = row.rolling_casino_percent || row.rollingPercent || 0;
+        
+        
+        return (
+          <Box sx={{ textAlign: 'center', lineHeight: 1.2 }}>
+            <Typography variant="caption" sx={{ display: 'block', color: 'primary.main' }}>
+              슬롯 {slotPercent}%
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', color: 'secondary.main' }}>
+              카지노 {casinoPercent}%
+            </Typography>
+          </Box>
+        );
+      }
+      
+      // bankInfo 포맷 처리
+      if (column.format === 'bankInfo' && typeof value === 'object' && value !== null) {
+        if (value.bankName && value.accountNumber && value.accountHolder) {
+          return (
+            <Box sx={{ textAlign: 'center', width: '100%' }}>
+              <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 'bold' }}>
+                {value.bankName} {value.accountNumber}
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                ({value.accountHolder})
+              </Typography>
+            </Box>
+          );
+        } else {
+          return (
+            <Typography variant="body2" sx={{ textAlign: 'center', width: '100%', color: 'text.secondary' }}>
+              -
+            </Typography>
+          );
+        }
+      }
+      
+      // value가 객체인 경우 문자열로 변환
+      let displayValue = value;
+      if (value !== undefined && value !== null) {
+        if (typeof value === 'object') {
+          // userId 컬럼의 특별한 처리
+          if (column.id === 'userId') {
+            if (Array.isArray(value)) {
+              // 배열인 경우: ['user002', '박영희'] -> "user002 (박영희)"
+              displayValue = value.length > 1 ? `${value[0]} (${value[1]})` : value[0] || '';
+            } else if (value.id && value.nickname) {
+              // 객체인 경우: {id: 'user003', nickname: '이민수'} -> "user003 (이민수)"
+              displayValue = `${value.id} (${value.nickname})`;
+            } else {
+              // 기타 객체인 경우 JSON.stringify 사용
+              displayValue = JSON.stringify(value);
+            }
+          } else {
+            // 그룹 컬럼의 중첩된 값인 경우 (예: profitLoss.slot)
+            if (column.id && column.id.includes('.')) {
+              const keys = column.id.split('.');
+              let nestedValue = row;
+              for (const key of keys) {
+                nestedValue = nestedValue?.[key];
+              }
+              
+              if (nestedValue !== undefined && nestedValue !== null) {
+                // 숫자인 경우 포맷팅
+                if (typeof nestedValue === 'number') {
+                  displayValue = nestedValue.toLocaleString();
+                  // 음수인 경우 빨간색으로 표시
+                  if (nestedValue < 0) {
+                    return (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          textAlign: 'center !important', 
+                          width: '100%',
+                          color: 'error.main',
+                          fontWeight: 500
+                        }}
+                      >
+                        {displayValue}
+                      </Typography>
+                    );
+                  }
+                } else {
+                  displayValue = String(nestedValue);
+                }
+              } else {
+                displayValue = '-';
+              }
+            } else {
+              // 일반 객체인 경우 안전하게 문자열로 변환
+              try {
+                if (value.toString && typeof value.toString === 'function' && value.toString() !== '[object Object]') {
+                  displayValue = value.toString();
+                } else {
+                  displayValue = JSON.stringify(value);
+                }
+              } catch (error) {
+                // console.warn('객체를 문자열로 변환하는 중 오류 발생:', error, value);
+                displayValue = '[객체]';
+              }
+            }
+          }
+        } else {
+          // 숫자인 경우 포맷팅
+          if (typeof value === 'number') {
+            displayValue = value.toLocaleString();
+          } else if (typeof value === 'string') {
+            // ISO 날짜 형식인지 확인 (YYYY-MM-DDTHH:mm:ss.sssZ)
+            if (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/)) {
+              // 날짜로 변환하여 포맷팅
+              displayValue = formatDateKorean(value, true);
+            } else {
+              displayValue = value;
+            }
+          } else {
+            displayValue = String(value);
+          }
+        }
+      } else {
+        displayValue = '-';
+      }
+      
+      const defaultCellContent = (
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            textAlign: 'center !important', 
+            width: '100%',
+            whiteSpace: 'nowrap', // 줄바꿈 방지
+            overflow: 'hidden', // 넘치는 텍스트 숨김
+            textOverflow: 'ellipsis' // 넘치는 텍스트를 ... 으로 표시
+          }}
+        >
+          {displayValue}
+        </Typography>
+      );
+      
+      // 클릭 가능한 경우 클릭 핸들러 추가
+      if (column.clickable) {
+        return (
+          <Box
+            onClick={handleCellClick}
+            sx={{
+              cursor: 'pointer',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+                borderRadius: 1
+              },
+              width: '100%',
+              padding: '4px'
+            }}
+          >
+            {defaultCellContent}
+          </Box>
+        );
+      }
+      
+      return defaultCellContent;
+  }
+};
+
+CellRenderer.propTypes = {
+  column: PropTypes.object.isRequired,
+  row: PropTypes.object.isRequired,
+  value: PropTypes.any,
+  sequentialPageNumbers: PropTypes.bool,
+  page: PropTypes.number,
+  rowsPerPage: PropTypes.number,
+  rowIndex: PropTypes.number
+};
+
+export default React.memo(CellRenderer); 

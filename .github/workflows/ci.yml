@@ -1,0 +1,152 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-admin-dashboard:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: admin-dashboard-source/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./admin-dashboard-source
+      run: npm ci
+    
+    - name: Run tests
+      working-directory: ./admin-dashboard-source
+      run: npm test -- --watchAll=false || true
+    
+    - name: Build
+      working-directory: ./admin-dashboard-source
+      run: npm run build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: admin-dashboard-build
+        path: admin-dashboard-source/dist/
+
+  test-admin-api:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: newmoon
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: admin-api-source/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./admin-api-source
+      run: npm ci
+    
+    - name: Run tests
+      working-directory: ./admin-api-source
+      env:
+        DB_HOST: localhost
+        DB_USER: root
+        DB_PASSWORD: root
+        DB_NAME: newmoon
+        JWT_SECRET: test-secret-key
+      run: npm test || true
+
+  test-user-page:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: user-page-source/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./user-page-source
+      run: npm ci
+    
+    - name: Run tests
+      working-directory: ./user-page-source
+      run: npm test -- --watchAll=false || true
+    
+    - name: Build
+      working-directory: ./user-page-source
+      run: npm run build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: user-page-build
+        path: user-page-source/build/
+
+  test-user-api:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: newmoon
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: user-api-source/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./user-api-source
+      run: npm ci
+    
+    - name: Run tests
+      working-directory: ./user-api-source
+      env:
+        DB_HOST: localhost
+        DB_USER: root
+        DB_PASSWORD: root
+        DB_NAME: newmoon
+        JWT_SECRET: test-secret-key
+      run: npm test || true

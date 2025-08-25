@@ -1,0 +1,477 @@
+import axios from 'axios';
+import { API_CONFIG } from '../config/apiConfig';
+
+// API 서비스 통합 관리
+const API_BASE_URL = API_CONFIG.BASE_URL;
+
+// API 서버 항상 사용
+
+/*
+ * 주의: Vite 프록시 설정이 필요합니다.
+ * vite.config.js에 다음 설정을 추가해주세요:
+ *
+ * server: {
+ *   proxy: {
+ *     '/api-server': {
+ *       target: 'http://localhost:5xxx', // 현재 Vite 개발 서버 포트
+ *       changeOrigin: false,
+ *       rewrite: (path) => path.replace(/^\/api-server/, '')
+ *     }
+ *   }
+ * }
+ *
+ * 또는 정적 파일을 사용하려면 public/api-server 디렉토리에 health.json 파일이 있어야 합니다.
+ */
+
+// API 서버 상태 확인 제거 - 항상 API 사용
+
+// axios 인스턴스 생성
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  // 요청 실패 시 10초 타임아웃 설정
+  timeout: 10000
+});
+
+// 환경별 User API URL 설정
+const getUserApiBaseUrl = () => {
+  // 개발 환경에서 외부 IP로 접속한 경우 직접 API 서버에 연결
+  if (import.meta.env.DEV && !API_CONFIG.IS_LOCALHOST && window.location.port === '5173') {
+    return `http://${window.location.hostname}:5101/api`;
+  }
+  // 기본값: localhost
+  return 'http://localhost:5101/api';
+};
+
+// 유저 API 인스턴스 생성 (포트 5101 사용)
+const userApi = axios.create({
+  baseURL: getUserApiBaseUrl(),
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000
+});
+
+// 요청 인터셉터 - 토큰 추가
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      // API 서버 체크 제거 - 항상 API 사용
+      
+      // 로그인 엔드포인트는 토큰을 추가하지 않음
+      const isLoginEndpoint = config.url && (
+        config.url.includes('/auth/login') || 
+        config.url.includes('/auth/admin/login') ||
+        config.url.includes('/auth/login-admin')
+      );
+      
+      // 로그인 요청에는 도메인 정보 추가
+      if (isLoginEndpoint) {
+        config.headers['X-Domain'] = window.location.hostname;
+      } else {
+        const token = localStorage.getItem('token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
+      
+      return config;
+    } catch (error) {
+      console.error('요청 인터셉터 오류:', error);
+      return Promise.reject({
+        ...error,
+        isApiServerDown: true,
+        message: '요청 처리 중 오류가 발생했습니다. 로컬 데이터를 사용합니다.'
+      });
+    }
+  },
+  (error) => Promise.reject(error)
+);
+
+// 유저 API 요청 인터셉터
+userApi.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    } catch (error) {
+      console.error('유저 API 요청 인터셉터 오류:', error);
+      return Promise.reject(error);
+    }
+  },
+  (error) => Promise.reject(error)
+);
+
+// 응답 인터셉터 - 에러 처리 및 토큰 갱신
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    
+    // API 서버 다운 에러인 경우 (요청 인터셉터에서 발생)
+    if (error.isApiServerDown) {
+      return Promise.reject(error);
+    }
+    
+    const originalRequest = error.config;
+    
+    // API 서버 연결 실패인 경우 그대로 에러 전달
+    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
+      return Promise.reject(error);
+    }
+    
+    // 401 에러(인증 실패)이고 토큰 갱신 시도를 아직 하지 않은 경우
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      console.log('401 에러 발생. URL:', originalRequest.url);
+      
+      // JWT 만료 확인
+      const errorMessage = error.response.data?.error || error.response.data?.message || '';
+      const isJwtExpired = errorMessage.toLowerCase().includes('jwt expired') || 
+                          errorMessage.toLowerCase().includes('token expired');
+      
+      if (isJwtExpired) {
+        console.log('🔒 JWT 토큰 만료 감지');
+      }
+      
+      // 특정 API 호출은 401 에러가 발생해도 로그인 페이지로 리다이렉트하지 않음
+      const skipAuthUrls = [
+        '/settings/bank-accounts',
+        '/members/', // 회원 상세 조회
+        '/agent-levels', // 에이전트 레벨 조회
+        '/domains', // 도메인 조회 (전체 경로 포함)
+        '/domain-permissions/', // 도메인 권한 조회
+        '/username-change/', // 아이디 변경 검증
+      ];
+      
+      const shouldSkipAuth = skipAuthUrls.some(url => 
+        originalRequest.url && originalRequest.url.includes(url)
+      );
+      
+      console.log('Should skip auth:', shouldSkipAuth);
+      
+      if (shouldSkipAuth) {
+        return Promise.reject(error);
+      }
+      
+      originalRequest._retry = true;
+      
+      
+      try {
+        // 리프레시 토큰으로 새 액세스 토큰 요청
+        const refreshToken = localStorage.getItem('refreshToken');
+        const currentToken = localStorage.getItem('token');
+        
+        
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
+          refreshToken,
+        }, {
+          headers: {
+            'Authorization': `Bearer ${currentToken}`
+          }
+        });
+        
+        
+        // 새 토큰 저장
+        const { token } = response.data;
+        localStorage.setItem('token', token);
+        
+        // 원래 요청 재시도
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        
+        // 토큰 갱신 실패 시 로그아웃 처리
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        
+        // 로그인 페이지로 리다이렉트 (React Router 사용)
+        // window.location.href 대신 에러를 throw하여 컴포넌트에서 처리하도록 함
+        const authError = new Error('Authentication failed');
+        authError.isAuthError = true;
+        return Promise.reject(authError);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// 유저 API 응답 인터셉터
+userApi.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    // 동일한 에러 처리 로직 적용
+    if (error.response && error.response.status === 401) {
+      // 토큰 갱신 로직 등
+    }
+    return Promise.reject(error);
+  }
+);
+
+// API 서비스 함수들
+const apiService = {
+  // 인증 관련 API
+  auth: {
+    login: (credentials) => api.post('/auth/admin/login', credentials),
+    logout: () => api.post('/auth/logout'),
+    refreshToken: (refreshToken) => api.post('/auth/refresh-token', { refreshToken }),
+    me: () => api.get('/auth/me'),
+  },
+  
+  // 단계 관련 API
+  agentLevels: {
+    getAll: () => api.get('/agent-levels'),
+    getById: (id) => api.get(`/agent-levels/${id}`),
+    create: (data) => api.post('/agent-levels', data),
+    update: (id, data) => api.put(`/agent-levels/${id}`, data),
+    delete: (id) => api.delete(`/agent-levels/${id}`),
+    updateHierarchy: (id, hierarchyOrder) => api.put(`/agent-levels/${id}/hierarchy`, { hierarchyOrder }),
+  },
+  
+  // 권한 관련 API
+  permissions: {
+    getRoles: () => api.get('/permissions/roles'),
+    getRoleById: (id) => api.get(`/permissions/roles/${id}`),
+    createRole: (data) => api.post('/permissions/roles', data),
+    updateRole: (id, data) => api.put(`/permissions/roles/${id}`, data),
+    deleteRole: (id) => api.delete(`/permissions/roles/${id}`),
+    getRolePermissions: (roleId) => api.get(`/permissions/roles/${roleId}/permissions`),
+    updateRolePermissions: (roleId, permissions) => 
+      api.put(`/permissions/roles/${roleId}/permissions`, { permissions }),
+    
+    // 회원별 권한 관리
+    getMemberPermissions: (memberId) => api.get(`/permissions/member/${memberId}`),
+    updateMemberPermissions: (memberId, permissions) => 
+      api.put(`/permissions/member/${memberId}`, { permissions }),
+    
+    // 단계별 기본 권한 관리
+    updateAgentLevelPermissions: (levelId, permissions) => 
+      api.put(`/permissions/agent-level/${levelId}`, { permissions }),
+  },
+  
+  // 회원 관련 API
+  members: {
+    getAll: (params) => api.get('/members', { params }),
+    getById: (id) => api.get(`/members/${id}`),
+    create: (data) => api.post('/members', data),
+    update: (id, data) => api.put(`/members/${id}`, data),
+    delete: (id) => api.delete(`/members/${id}`),
+    getChildren: (parentId) => api.get(`/members/${parentId}/children`),
+    updatePermissions: (id, permissions) => api.put(`/members/${id}/permissions`, { permissions }),
+    getByLevel: (levelId) => api.get(`/members/by-level/${levelId}`),
+    checkUsername: (username) => api.get(`/members/check-username/${username}`),
+    checkNickname: (nickname) => api.get(`/members/check-nickname/${nickname}`),
+    checkReferralCode: (referralCode, memberId) => 
+      api.get(`/members/check-referral-code/${referralCode}`, { params: { memberId } }),
+    updateReferralCode: (id, referralCode) => 
+      api.put(`/members/${id}/referral-code`, { referralCode }),
+  },
+  
+  // 대시보드 관련 API
+  dashboard: {
+    getStats: (period) => api.get('/dashboard/stats', { params: { period } }),
+    getChartData: (chartType, period) => 
+      api.get('/dashboard/charts', { params: { chartType, period } }),
+  },
+  
+  // 유저 상태 관련 API
+  userStatus: {
+    getAll: () => api.get('/user-status/all'),
+  },
+  
+  // 아이디 변경 관련 API
+  usernameChange: {
+    getHistory: (params) => api.get('/username-change/history', { params }),
+    getOnlineChangeableUsers: () => api.get('/username-change/online-users'),
+    getChangeableUsers: (agentId, excludeUserId) => 
+      api.get('/username-change/changeable-users', { params: { agentId, excludeUserId } }),
+    toggleChangeEnabled: (userId, enabled) => 
+      api.put(`/username-change/toggle-enabled/${userId}`, { enabled }),
+    executeChange: (data) => api.post('/username-change/execute', data),
+    validateChange: (userId) => api.get(`/username-change/validate/${userId}`),
+  },
+  
+  // 정산 관련 API
+  settlement: {
+    getTodaySettlement: () => api.get('/settlement/today'),
+    getDailySettlement: (params) => api.get('/settlement/daily', { params }),
+    getDaily: (params) => api.get('/settlement/daily', { params }), // alias for getDailySettlement
+    getThirdPartySettlement: (params) => api.get('/settlement/third-party', { params }),
+    getDashboard: (params) => api.get('/settlement-api/dashboard', { params }),
+  },
+  
+  // 롤링금전환내역 API
+  rollingHistory: {
+    getAll: (params) => api.get('/rolling-history', { params }),
+    convert: (data) => api.post('/rolling-history/convert', data),
+  },
+  
+  // 커미션내역 API
+  commissionHistory: {
+    getAll: (params) => api.get('/settings/betting-commission/logs', { params }),
+    getStats: (params) => api.get('/settings/betting-commission/stats', { params }),
+  },
+  
+  // 머니처리내역 API
+  moneyHistory: {
+    getAll: (params) => api.get('/money-history', { params }),
+    create: (data) => api.post('/money-history', data),
+    updateStatus: (id, data) => api.put(`/money-history/${id}/status`, data),
+  },
+  moneyTransfer: {
+    getAll: (params) => api.get('/money-transfer', { params }),
+    transfer: (data) => api.post('/money-transfer/transfer', data),
+    adminTransfer: (data) => api.post('/money-transfer/admin-transfer', data, {
+      timeout: 30000 // Honor API 동기화 때문에 30초로 증가
+    }),
+  },
+  
+  // 베팅내역 API
+  betting: {
+    getSlotCasino: (params) => api.get('/betting/slot-casino', { params }),
+    getDetail: (bettingId) => api.get(`/betting/detail/${bettingId}`),
+  },
+
+  // 팝업 관리 API
+  popups: {
+    getAll: (params) => api.get('/popups', { params }),
+    getById: (id) => api.get(`/popups/${id}`),
+    create: (data) => api.post('/popups', data),
+    update: (id, data) => api.put(`/popups/${id}`, data),
+    delete: (id) => api.delete(`/popups/${id}`),
+    toggle: (id) => api.post(`/popups/${id}/toggle`),
+    getStats: (id) => api.get(`/popups/${id}/stats`),
+    uploadImage: (formData) => api.post('/popups/upload-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000 // 이미지 업로드는 30초 타임아웃
+    }),
+    deleteImage: (data) => api.delete('/popups/delete-image', { data }),
+    
+    // 자동 닫기 설정 관련 API
+    getAutoCloseSettings: () => api.get('/popups/auto-close-settings'),
+    updateAutoCloseSettings: (data) => api.put('/popups/auto-close-settings', data),
+    
+    // 숨김 기록 삭제 API (개발환경 전용)
+    clearAllDismissals: () => api.delete('/popups/dismissals/clear-all'),
+  },
+
+  // API 잔액
+  balance: {
+    get: () => api.post('/balance/getbalance'), // 개별 사용자 잔액
+    getAgent: () => api.get('/honor-sync/agent-info'), // 에이전트 전체 잔액
+    refresh: (userId) => api.post(`/balance/admin/refresh-balance/${userId}`),
+  },
+
+  // 게임 관리
+  games: {
+    getAll: (params) => api.get('/games', { params }),
+    getById: (id) => api.get(`/games/${id}`),
+    create: (data) => api.post('/games', data),
+    update: (id, data) => api.put(`/games/${id}`, data),
+    updateStatus: (id, data) => api.put(`/games/${id}/status`, data),
+    sync: (data) => api.post('/games/sync', data),
+    getVendors: (params) => api.get('/games/vendors', { params }),
+  },
+  
+  // Honor API 동기화
+  honorSync: {
+    getSyncStatus: () => api.get('/honor-sync/sync-status'),
+    syncAllMembers: () => api.post('/honor-sync/sync-all-members'),
+    syncMember: (userId) => api.post(`/honor-sync/sync-member/${userId}`),
+    validateGameBalance: (data) => api.post('/honor-sync/validate-game-balance', data),
+    validateTransferBalance: (data) => api.post('/honor-sync/validate-transfer-balance', data),
+    transferToGame: (data) => api.post('/honor-sync/transfer-to-game', data),
+    withdrawFromGame: (data) => api.post('/honor-sync/withdraw-from-game', data),
+  },
+
+  // 설정 관련 API
+  settings: {
+    // 은행 계좌 관련
+    getBankAccounts: () => api.get('/settings/bank-accounts'),
+    addBankAccount: (data) => api.post('/settings/bank-accounts', data),
+    updateBankAccount: (id, data) => api.put(`/settings/bank-accounts/${id}`, data),
+    deleteBankAccount: (id) => api.delete(`/settings/bank-accounts/${id}`)
+  },
+  
+  // 시스템 설정 API
+  systemSettings: {
+    getApiSync: () => api.get('/system-settings/api-sync'),
+    setApiSyncLevel: (level) => api.post('/system-settings/api-sync/level', { level }),
+    toggleMemberApiSync: (memberId, enabled) => api.post(`/system-settings/api-sync/toggle/${memberId}`, { enabled }),
+    getDomainSettings: () => api.get('/system-settings/domain-settings'),
+    setDomainSettingLevel: (levelId) => api.post('/system-settings/domain-settings/level', { levelId })
+  },
+  
+  // 마스터 IP 관리 API
+  masterIp: {
+    getAll: () => api.get('/master-ip'),
+    add: (data) => api.post('/master-ip', data),
+    toggle: (id) => api.put(`/master-ip/${id}/toggle`),
+    delete: (id) => api.delete(`/master-ip/${id}`),
+    getLogs: (params) => api.get('/master-ip/logs', { params })
+  },
+
+  // Honor API 동기화
+  honorSync: {
+    transferToGame: (data) => api.post('/honor-sync/transfer-to-game', data),
+    withdrawFromGame: (data) => api.post('/honor-sync/withdraw-from-game', data),
+    syncStatus: () => api.get('/honor-sync/sync-status'),
+    agentInfo: () => api.get('/honor-sync/agent-info')
+  },
+
+  // 롤링금 전환
+  rollingTransfer: {
+    transfer: (data) => api.post('/rolling-transfer/transfer', data),
+    getHistory: (params) => api.get('/rolling-transfer/history', { params })
+  },
+
+  // 에이전트 요청
+  agentRequests: {
+    create: (data) => api.post('/agent-requests/create', data),
+    getReceived: () => api.get('/agent-requests/received'),
+    updateStatus: (id, data) => api.put(`/agent-requests/${id}/status`, data)
+  },
+  // 입금 관련 (유저 API 사용)
+  deposit: {
+    getBankAccount: () => userApi.get('/deposit/bank-account'),
+    createInquiry: (data) => userApi.post('/deposit/inquiry', data),
+    getCooldownSettings: () => userApi.get('/deposit/cooldown-settings')
+  },
+  // 출금 관련 (유저 API 사용)
+  withdrawal: {
+    createInquiry: (data) => userApi.post('/withdrawal/inquiry', data),
+    getCooldownSettings: () => userApi.get('/withdrawal/cooldown-settings')
+  },
+
+  // 공지사항 관련 API
+  notices: {
+    getAll: (params) => api.get('/notices', { params }),
+    getById: (id) => api.get(`/notices/${id}`),
+    create: (data) => api.post('/notices', data),
+    update: (id, data) => api.put(`/notices/${id}`, data),
+    delete: (id) => api.delete(`/notices/${id}`),
+    incrementView: (id) => api.put(`/notices/${id}/view`),
+    getActiveCount: (params) => api.get('/notices/count/active', { params })
+  },
+
+  // 로그 관련 API
+  logs: {
+    getAuthLogs: (params) => api.get('/logs/auth', { params }),
+    getMemberChanges: (params) => api.get('/logs/member-changes', { params }),
+    getSystemLogs: (params) => api.get('/logs/system', { params })
+  },
+
+  // 직접 API 호출 메서드
+  get: (url, config) => api.get(url, config),
+  post: (url, data, config) => api.post(url, data, config),
+  put: (url, data, config) => api.put(url, data, config),
+  delete: (url, config) => api.delete(url, config),
+  patch: (url, data, config) => api.patch(url, data, config)
+};
+
+export default apiService; 

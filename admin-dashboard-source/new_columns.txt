@@ -1,0 +1,29 @@
+  const columnsWithActions = useMemo(() => {
+    return popupColumns.map(column => {
+      if (column.id === 'actions') {
+        return {
+          ...column,
+          // CellRenderer가 인식할 수 있도록 actions 배열 추가
+          actions: [
+            {
+              type: 'button',
+              label: '수정',
+              buttonText: '수정',
+              color: 'primary',
+              variant: 'outlined',
+              onClick: handleEdit
+            },
+            {
+              type: 'button',
+              label: '삭제',
+              buttonText: '삭제',
+              color: 'error',
+              variant: 'outlined',
+              onClick: handleDelete
+            }
+          ]
+        };
+      }
+      return column;
+    });
+  }, [handleEdit, handleDelete]);

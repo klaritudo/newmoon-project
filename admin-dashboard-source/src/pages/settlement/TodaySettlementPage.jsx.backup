@@ -1,0 +1,903 @@
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Box, Paper, Typography, Grid, useTheme } from '@mui/material';
+import { 
+  TableFilterAndPagination, 
+  TableHeader, 
+  BaseTable, 
+  TypeTreeView, 
+  TableHeightSetting, 
+  TableResizeHandle, 
+  ColumnVisibilityDialog, 
+  PageHeader, 
+  PageContainer,
+  TableDebugInfo,
+  BulkActionBar 
+} from '../../components/baseTemplate/components';
+import MemberDetailDialog from '../../components/dialogs/MemberDetailDialog';
+import { 
+  useTableFilterAndPagination, 
+  useTableHeader, 
+  useTableColumnDrag,
+  useTableData,
+  useTypeHierarchy,
+  useTableIndent,
+  useTableHeaderFixed,
+  useTableAutoHeight,
+  useTableResize,
+  useColumnVisibility,
+  useTable
+} from '../../components/baseTemplate/hooks';
+import { useNotification } from '../../contexts/NotificationContext.jsx';
+import { 
+  todaySettlementColumns,
+  apiOptions,
+  bankList
+} from './data/todaySettlementData';
+import useDynamicTypes from '../../hooks/useDynamicTypes';
+import usePageData from '../../hooks/usePageData';
+import { useSocket } from '../../context/SocketContext';
+import { useSnackbar } from '../../hooks/useSnackbar';
+
+/**
+ * 당일정산 페이지
+ * 당일정산 목록 조회, 필터링, 페이지네이션 등의 기능을 제공합니다.
+ */
+const TodaySettlementPage = () => {
+  const theme = useTheme();
+
+  // 전역 알림 사용
+  const { handleRefresh } = useNotification();
+  
+  // Socket 서비스 사용
+  const { socketService, agentLevelService } = useSocket();
+
+  // 동적 유형 관리
+  const {
+    types,
+    typeHierarchy,
+    isLoading: typesLoading,
+    error: typesError,
+    isInitialized: typesInitialized
+  } = useDynamicTypes();
+  
+  // 범용 페이지 데이터 훅 사용 (1단계 구조)
+  const {
+    data,
+    types: pageDataTypes, // 사용하지 않음
+    typeHierarchy: pageDataTypeHierarchy, // 사용하지 않음
+    isLoading,
+    error,
+    refreshPageData
+  } = usePageData({
+    pageType: 'settlement',
+    requiresMembersData: false
+  });
+  
+  // 실제 사용할 데이터
+  const actualData = data;
+  
+  // 디버깅: 데이터 확인 - buildHierarchicalDataRecursive 정의 후로 이동 필요
+  
+  // Socket 이벤트로 agent-levels 변경 감지
+  const refreshPageDataRef = useRef(refreshPageData);
+  refreshPageDataRef.current = refreshPageData;
+  
+  // AgentLevelService의 변경사항 감지
+  useEffect(() => {
+    if (!agentLevelService) return;
+    
+    const listenerId = agentLevelService.addListener((event) => {
+      console.log('당일정산: AgentLevelService 이벤트 수신:', event.type);
+      
+      if (event.type === 'hierarchy-changed' || event.type === 'updated' || event.type === 'loaded') {
+        console.log('당일정산: 계층 변경 감지, 데이터 새로고침');
+        // 약간의 지연을 두고 새로고침 (DB 업데이트 완료 대기)
+        setTimeout(() => {
+          if (refreshPageDataRef.current) {
+            refreshPageDataRef.current();
+          }
+        }, 500);
+      }
+    });
+    
+    return () => {
+      agentLevelService.removeListener(listenerId);
+    };
+  }, [agentLevelService]);
+  
+  // 테이블 높이 자동 조정 - useTableAutoHeight 훅 사용
+  const {
+    containerRef,
+    tableHeight,
+    autoHeight,
+    toggleAutoHeight,
+    setManualHeight
+  } = useTableAutoHeight({
+    defaultHeight: '500px',
+    defaultAutoHeight: true,
+    minHeight: 300,
+    bottomMargin: 100
+  });
+
+  // 테이블 리사이즈 기능 - useTableResize 훅 사용
+  const {
+    isDragging,
+    getResizeHandleProps,
+    calculateMaxHeight
+  } = useTableResize({
+    minHeight: 200,
+    maxHeight: null,
+    useViewportLimit: true,
+    viewportMargin: 50,
+    onResize: (newHeight) => {
+      if (autoHeight) {
+        toggleAutoHeight(false);
+      }
+      setManualHeight(`${newHeight}px`);
+    }
+  });
+
+  // 들여쓰기 모드 - useTableIndent 훅 사용 (정산 페이지에서는 비활성화)
+  const { indentMode, toggleIndentMode } = useTableIndent(true);
+
+  // parentId 기반 계층 구조 생성 (levelOrder 순서 유지)
+  const buildHierarchicalDataRecursive = useCallback((items, parentId = null, level = 0) => {
+    // parentId가 null, 0, undefined인 경우 모두 최상위로 처리
+    const children = items.filter(item => {
+      if (parentId === null) {
+        return item.parentId === null || item.parentId === 0 || item.parentId === undefined;
+      }
+      return item.parentId === parentId;
+    });
+    
+    // levelOrder로 정렬하여 순서 유지
+    children.sort((a, b) => {
+      const aOrder = a.levelOrder || a.level_order || a.agent_level_order || 999;
+      const bOrder = b.levelOrder || b.level_order || b.agent_level_order || 999;
+      return aOrder - bOrder;
+    });
+    
+    return children.map(item => ({
+      ...item,
+      level: level,  // 레벨 정보 추가
+      _displayLevel: level,  // TableBody가 사용하는 레벨 정보
+      children: buildHierarchicalDataRecursive(items, item.id, level + 1)
+    })).filter(item => item.id !== undefined);
+  }, []);
+  
+  // 계층적 데이터를 평탄화하여 표시용 데이터 생성 (회원관리와 동일한 방식)
+  const flattenHierarchicalData = useCallback((items) => {
+    const result = [];
+    const flatten = (items) => {
+      items.forEach(item => {
+        result.push(item);
+        if (item.children && item.children.length > 0) {
+          flatten(item.children);
+        }
+      });
+    };
+    flatten(items);
+    return result;
+  }, []);
+
+  // 계층 데이터 생성 (회원관리와 동일)
+  const hierarchicalData = useMemo(() => {
+    console.log('🏗️ 당일정산 계층 데이터 생성, 원본 데이터:', data?.length || 0, '개');
+    
+    if (!data || data.length === 0) return [];
+    
+    // levelOrder로 먼저 정렬하여 단계설정 순서 반영
+    const sortedData = [...data].sort((a, b) => {
+      const aOrder = a.levelOrder || a.level_order || a.agent_level_order || 999;
+      const bOrder = b.levelOrder || b.level_order || b.agent_level_order || 999;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.id - b.id;
+    });
+    
+    const result = buildHierarchicalDataRecursive(sortedData);
+    console.log('🏗️ 당일정산 계층 구조 결과:', result.length, '개 최상위 항목');
+    return result;
+  }, [data, buildHierarchicalDataRecursive]);
+  
+  // 펼쳐진 항목 추적 - 초기값을 함수로 설정 (회원관리와 동일)
+  const [expandedItems, setExpandedItems] = useState(() => {
+    // 초기에 모든 항목을 펼친 상태로 설정
+    const initialExpanded = {};
+    const addAllItems = (items) => {
+      items.forEach(item => {
+        if (item.children && item.children.length > 0) {
+          initialExpanded[item.id] = true;
+          addAllItems(item.children);
+        }
+      });
+    };
+    if (hierarchicalData.length > 0) {
+      addAllItems(hierarchicalData);
+    }
+    return initialExpanded;
+  });
+  
+  // 항목 펼치기/접기 토글
+  const toggleTypeExpand = useCallback((itemId) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  }, []);
+  
+  // 모든 항목 펼치기
+  const setAllExpanded = useCallback((expanded) => {
+    const newExpanded = {};
+    const addAllItems = (items) => {
+      items.forEach(item => {
+        if (item.children && item.children.length > 0) {
+          newExpanded[item.id] = expanded;
+          addAllItems(item.children);
+        }
+      });
+    };
+    addAllItems(hierarchicalData);
+    setExpandedItems(newExpanded);
+  }, [hierarchicalData]);
+  
+  // hierarchicalData가 변경될 때 모든 항목 펼치기 (회원관리와 동일)
+  useEffect(() => {
+    // 데이터가 처음 로드될 때만 초기 확장 상태 설정
+    if (hierarchicalData.length > 0 && Object.keys(expandedItems).length === 0) {
+      const newExpanded = {};
+      const addAllItems = (items) => {
+        items.forEach(item => {
+          if (item.children && item.children.length > 0) {
+            newExpanded[item.id] = true;
+            addAllItems(item.children);
+          }
+        });
+      };
+      addAllItems(hierarchicalData);
+      setExpandedItems(newExpanded);
+    }
+  }, [hierarchicalData.length]); // 의존성을 길이로만 확인
+  
+  // 평탄화된 데이터 (회원관리와 동일)
+  const flattenedData = useMemo(() => {
+    return flattenHierarchicalData(hierarchicalData);
+  }, [hierarchicalData, flattenHierarchicalData]);
+  
+  // 헤더 행 고정 기능 - useTableHeaderFixed 훅 사용
+  const {
+    tableHeaderRef,
+    getTableHeaderStyles
+  } = useTableHeaderFixed({
+    zIndex: 10,
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
+  });
+
+  // 회원상세정보 다이얼로그 상태
+  const [memberDetailDialogOpen, setMemberDetailDialogOpen] = useState(false);
+  const [selectedMemberForDetail, setSelectedMemberForDetail] = useState(null);
+
+  // 회원상세정보 다이얼로그 핸들러들
+  const handleMemberDetailOpen = useCallback((member) => {
+    setSelectedMemberForDetail(member);
+    setMemberDetailDialogOpen(true);
+  }, []);
+
+  const handleMemberDetailClose = useCallback(() => {
+    setMemberDetailDialogOpen(false);
+    setSelectedMemberForDetail(null);
+  }, []);
+
+  const handleMemberDetailSave = useCallback((updatedMember) => {
+    alert(`${updatedMember.nickname || updatedMember.username}님의 정보가 저장되었습니다.`);
+    handleMemberDetailClose();
+  }, [handleMemberDetailClose]);
+
+  // 엑셀 다운로드 핸들러
+  const handleExcelDownload = useCallback(() => {
+    alert('당일정산 목록을 엑셀로 다운로드합니다.');
+  }, []);
+
+  // 인쇄 핸들러
+  const handlePrint = useCallback(() => {
+    alert('당일정산 목록을 인쇄합니다.');
+  }, []);
+
+  // 컬럼에 액션 추가 (회원관리와 동일)
+  const columnsWithActions = useMemo(() => {
+    return todaySettlementColumns.map(column => {
+      if (column.field === 'type') {
+        return {
+          ...column,
+          renderCell: (params) => {
+            const { row } = params;
+            const hasChildren = row.children && row.children.length > 0;
+            const isExpanded = expandedItems[row.id] !== false;
+            const level = row._displayLevel || 0;
+            
+            return (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  paddingLeft: `${level * 20}px`,
+                  minHeight: '40px'
+                }}
+              >
+                {hasChildren && (
+                  <Box
+                    onClick={() => toggleTypeExpand(row.id)}
+                    sx={{
+                      cursor: 'pointer',
+                      marginRight: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '12px',
+                      color: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                        borderRadius: '4px'
+                      },
+                      padding: '2px 4px'
+                    }}
+                  >
+                    {isExpanded ? '▼' : '▶'}
+                  </Box>
+                )}
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: hasChildren ? 'bold' : 'normal',
+                    color: hasChildren ? 'primary.main' : 'text.primary'
+                  }}
+                >
+                  {row.type || '미분류'}
+                </Typography>
+              </Box>
+            );
+          }
+        };
+      }
+      return column;
+    });
+  }, [expandedItems, toggleTypeExpand]);
+
+  // 동적 필터 옵션 생성
+  const dynamicFilterOptions = useMemo(() => {
+    const baseOptions = [
+      {
+        id: 'status',
+        label: '상태',
+        items: [
+          { value: '', label: '전체' },
+          { value: 'online', label: '온라인' },
+          { value: 'offline', label: '오프라인' },
+          { value: 'suspended', label: '정지' }
+        ]
+      },
+      {
+        id: 'type',
+        label: '회원유형',
+        items: [
+          { value: '', label: '전체' },
+          ...(typesInitialized && types ? Object.keys(types).map(typeId => ({
+            value: typeId,
+            label: types[typeId].label || typeId
+          })) : [])
+        ]
+      },
+      {
+        id: 'api',
+        label: 'API',
+        items: [
+          { value: '', label: '전체' },
+          ...apiOptions.map(option => ({
+            value: option.value,
+            label: option.label
+          }))
+        ]
+      }
+    ];
+    
+    return baseOptions;
+  }, [typesInitialized, types, apiOptions]);
+
+  // TableHeader 훅 사용
+  const {
+    searchText,
+    totalItems,
+    sequentialPageNumbers,
+    hasPinnedColumns,
+    isGridReady,
+    handleSearchChange,
+    handleClearSearch,
+    togglePageNumberMode,
+    toggleColumnPin: headerToggleColumnPin,
+    setGridReady
+  } = useTableHeader({
+    initialTotalItems: actualData.length,
+    tableId: 'todaySettlementPage',
+    onSearch: (value) => {
+      console.log(`당일정산 검색: ${value}`);
+    },
+    onToggleColumnPin: (hasPinned) => {
+      console.log(`컬럼 고정 토글: ${hasPinned}`);
+      if (hasPinned) {
+        setDefaultPinnedColumns();
+      } else {
+        clearAllPinnedColumns();
+      }
+    }
+  });
+
+  // 그리드 준비 상태로 설정
+  useEffect(() => {
+    setGridReady(true);
+  }, [setGridReady]);
+
+  // 컬럼 드래그 앤 드롭 관련 훅 사용
+  const {
+    columns,
+    dragInfo,
+    pinnedColumns,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop,
+    updateColumns,
+    isColumnPinned,
+    toggleColumnPin,
+    clearAllPinnedColumns,
+    setDefaultPinnedColumns
+  } = useTableColumnDrag({
+    initialColumns: columnsWithActions,
+    tableId: 'today_settlement_table',
+    initialPinnedColumns: ['checkbox', 'number', 'type', 'userId'],
+    onColumnOrderChange: (newColumns) => {
+      console.log('당일정산 테이블 컬럼 순서 변경:', newColumns);
+    }
+  });
+
+  // 컬럼 표시옵션 관련 훅 사용
+  const {
+    columnVisibility,
+    visibleColumns,
+    hiddenColumnsCount,
+    toggleableColumns,
+    toggleColumnVisibility,
+    showAllColumns,
+    resetToDefault
+  } = useColumnVisibility(columns, {
+    defaultHiddenColumns: [],
+    alwaysVisibleColumns: ['checkbox'],
+    tableId: 'today_settlement_table'
+  });
+
+  // 표시옵션 다이얼로그 상태
+  const [displayOptionsAnchor, setDisplayOptionsAnchor] = useState(null);
+  const isDisplayOptionsOpen = Boolean(displayOptionsAnchor);
+
+  // 표시옵션 다이얼로그 핸들러들
+  const handleDisplayOptionsClick = useCallback((event) => {
+    const anchorElement = event?.currentTarget || event?.target;
+    setDisplayOptionsAnchor(anchorElement);
+  }, []);
+
+  const handleDisplayOptionsClose = useCallback(() => {
+    setDisplayOptionsAnchor(null);
+  }, []);
+
+  // 드래그 앤 드롭 활성화
+  const draggableColumns = true;
+
+  // 드래그 관련 핸들러 모음
+  const dragHandlers = {
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop
+  };
+
+  // 행 클릭 핸들러
+  const handleRowClick = (row) => {
+    console.log('당일정산 행 클릭:', row);
+  };
+
+  // 계층 펼치기/접기 핸들러는 useTable 훅 정의 이후로 이동
+
+  // 필터 콜백 함수
+  const filterCallback = useCallback((result, filterId, filterValue) => {
+    switch (filterId) {
+      case 'status':
+        if (filterValue === 'all' || filterValue === '') return result;
+        
+        return result.filter(item => {
+          switch (filterValue) {
+            case 'online':
+              return item.connectionStatus === '온라인';
+            case 'offline':
+              return item.connectionStatus === '오프라인';
+            case 'suspended':
+              return item.connectionStatus === '정지';
+            default:
+              return true;
+          }
+        });
+        
+      case 'type':
+        if (filterValue === 'all' || filterValue === '') return result;
+        
+        return result.filter(item => 
+          item.type && item.type.id === filterValue
+        );
+        
+      case 'api':
+        if (filterValue === 'all' || filterValue === '') return result;
+        
+        return result.filter(item => item.api === filterValue);
+        
+      case 'date':
+        let dateFilteredResult = [...result];
+        
+        if (filterValue.startDate) {
+          dateFilteredResult = dateFilteredResult.filter(item => item.id >= 3);
+        }
+        
+        if (filterValue.endDate) {
+          dateFilteredResult = dateFilteredResult.filter(item => item.id <= 6);
+        }
+        
+        return dateFilteredResult;
+      default:
+        return result;
+    }
+  }, []);
+  
+  // useTableFilterAndPagination 훅은 flattenedData 정의 이후로 이동
+
+  // 컬럼 드래그 앤 드롭 관련 훅 사용
+  const {
+    columns,
+    dragInfo,
+    pinnedColumns,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop,
+    updateColumns,
+    isColumnPinned,
+    toggleColumnPin,
+    clearAllPinnedColumns,
+    setDefaultPinnedColumns
+  } = useTableColumnDrag({
+    initialColumns: columnsWithActions,
+    tableId: 'today_settlement_table',
+    initialPinnedColumns: ['checkbox', 'number', 'type', 'userId'],
+    onColumnOrderChange: (newColumns) => {
+      console.log('당일정산 테이블 컬럼 순서 변경:', newColumns);
+    }
+  });
+
+  // 컬럼 표시옵션 관련 훅 사용
+  const {
+    columnVisibility,
+    visibleColumns,
+    hiddenColumnsCount,
+    toggleableColumns,
+    toggleColumnVisibility,
+    showAllColumns,
+    resetToDefault
+  } = useColumnVisibility(columns, {
+    defaultHiddenColumns: [],
+    alwaysVisibleColumns: ['checkbox'],
+    tableId: 'today_settlement_table'
+  });
+
+  // 표시옵션 다이얼로그 상태
+  const [displayOptionsAnchor, setDisplayOptionsAnchor] = useState(null);
+  const isDisplayOptionsOpen = Boolean(displayOptionsAnchor);
+
+  // 표시옵션 다이얼로그 핸들러들
+  const handleDisplayOptionsClick = useCallback((event) => {
+    const anchorElement = event?.currentTarget || event?.target;
+    setDisplayOptionsAnchor(anchorElement);
+  }, []);
+
+  const handleDisplayOptionsClose = useCallback(() => {
+    setDisplayOptionsAnchor(null);
+  }, []);
+
+  // 드래그 앤 드롭 활성화
+  const draggableColumns = true;
+
+  // 드래그 관련 핸들러 모음
+  const dragHandlers = {
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop
+  };
+
+  // 행 클릭 핸들러
+  const handleRowClick = (row) => {
+    console.log('당일정산 행 클릭:', row);
+  };
+
+  // 계층 펼치기/접기 핸들러 - useTable 훅 정의 이후에 배치
+  const handleToggleExpand2 = useCallback((id) => {
+    console.log(`당일정산 유형 토글: ${id}`);
+    toggleTypeExpand(id);
+    
+    if (typeof tableHandleToggleExpand === 'function') {
+      tableHandleToggleExpand(id);
+    }
+  }, [toggleTypeExpand, tableHandleToggleExpand]);
+
+  // 총 평면화된 항목 수 계산 (회원관리와 동일)
+  const totalFlattenedItems = useMemo(() => {
+    return flattenedData.length;
+  }, [flattenedData]);
+
+  // 현재 페이지와 rowsPerPage를 활용하는 메모이제이션된 표시 데이터 (회원관리와 동일)
+  const visibleData = useMemo(() => {
+    if (!safeFilteredData || safeFilteredData.length === 0) return [];
+    
+    return safeFilteredData;
+  }, [safeFilteredData, page, rowsPerPage, totalFlattenedItems]);
+
+  // visibleColumns에 버튼 핸들러 다시 추가
+  const finalColumns = useMemo(() => {
+    return visibleColumns.map(column => {
+      // userId 컬럼에 클릭 핸들러 추가
+      if (column.id === 'userId') {
+        return {
+          ...column,
+          clickable: true,
+          onClick: (row) => {
+            console.log('아이디 클릭:', row);
+            handleMemberDetailOpen(row);
+          }
+        };
+      }
+      
+      return column;
+    });
+  }, [visibleColumns, handleMemberDetailOpen]);
+
+  // 당일정산 그룹별 색상 스타일
+  const settlementGroupStyles = `
+    /* 입출 그룹 - 파란색 계열 */
+    [data-column-id="deposit_withdrawal"],
+    [data-column-id*="deposit_withdrawal."] {
+      background-color: rgba(54, 153, 255, 0.15) !important;
+    }
+    
+    /* 슬롯 그룹 - 초록색 계열 */
+    [data-column-id="slot"],
+    [data-column-id*="slot."] {
+      background-color: rgba(76, 175, 80, 0.15) !important;
+    }
+    
+    /* 카지노 그룹 - 보라색 계열 */
+    [data-column-id="casino"],
+    [data-column-id*="casino."] {
+      background-color: rgba(156, 39, 176, 0.15) !important;
+    }
+    
+    /* 합계 그룹 - 주황색 계열 */
+    [data-column-id="total"],
+    [data-column-id*="total."] {
+      background-color: rgba(255, 152, 0, 0.15) !important;
+    }
+    
+    /* 테이블 바디의 셀에도 동일한 색상 적용 - 모든 가능한 선택자 */
+    .MuiTableBody-root .MuiTableCell-root[data-column-id="deposit_withdrawal"],
+    .MuiTableBody-root .MuiTableCell-root[data-column-id*="deposit_withdrawal."],
+    tbody .MuiTableCell-root[data-column-id="deposit_withdrawal"],
+    tbody .MuiTableCell-root[data-column-id*="deposit_withdrawal."],
+    table tbody tr td[data-column-id="deposit_withdrawal"],
+    table tbody tr td[data-column-id*="deposit_withdrawal."],
+    td[data-column-id="deposit_withdrawal"],
+    td[data-column-id*="deposit_withdrawal."] {
+      background-color: rgba(54, 153, 255, 0.08) !important;
+    }
+    
+    .MuiTableBody-root .MuiTableCell-root[data-column-id="slot"],
+    .MuiTableBody-root .MuiTableCell-root[data-column-id*="slot."],
+    tbody .MuiTableCell-root[data-column-id="slot"],
+    tbody .MuiTableCell-root[data-column-id*="slot."],
+    table tbody tr td[data-column-id="slot"],
+    table tbody tr td[data-column-id*="slot."],
+    td[data-column-id="slot"],
+    td[data-column-id*="slot."] {
+      background-color: rgba(76, 175, 80, 0.08) !important;
+    }
+    
+    .MuiTableBody-root .MuiTableCell-root[data-column-id="casino"],
+    .MuiTableBody-root .MuiTableCell-root[data-column-id*="casino."],
+    tbody .MuiTableCell-root[data-column-id="casino"],
+    tbody .MuiTableCell-root[data-column-id*="casino."],
+    table tbody tr td[data-column-id="casino"],
+    table tbody tr td[data-column-id*="casino."],
+    td[data-column-id="casino"],
+    td[data-column-id*="casino."] {
+      background-color: rgba(156, 39, 176, 0.08) !important;
+    }
+    
+    .MuiTableBody-root .MuiTableCell-root[data-column-id="total"],
+    .MuiTableBody-root .MuiTableCell-root[data-column-id*="total."],
+    tbody .MuiTableCell-root[data-column-id="total"],
+    tbody .MuiTableCell-root[data-column-id*="total."],
+    table tbody tr td[data-column-id="total"],
+    table tbody tr td[data-column-id*="total."],
+    td[data-column-id="total"],
+    td[data-column-id*="total."] {
+      background-color: rgba(255, 152, 0, 0.08) !important;
+    }
+  `;
+
+  // 로딩 중이거나 에러가 있는 경우 처리 - 회원관리처럼 제거
+  // 데이터가 없어도 UI는 표시하도록 변경
+
+  return (
+    <PageContainer>
+      {/* 당일정산 그룹별 색상 스타일 적용 */}
+      <style>{settlementGroupStyles}</style>
+      
+      {/* 페이지 헤더 */}
+      <PageHeader
+        title="당일정산"
+        onDisplayOptionsClick={handleDisplayOptionsClick}
+        showAddButton={false}
+        showRefreshButton={true}
+        onRefreshClick={async () => {
+          console.log('당일정산: 데이터 새로고침');
+          handleRefresh('당일정산 목록');
+          
+          // usePageData의 refetch 함수 호출
+          if (refreshPageData) {
+            await refreshPageData();
+          }
+        }}
+        sx={{ mb: 2 }}
+      />
+
+      {/* 컬럼 표시옵션 다이얼로그 */}
+      <ColumnVisibilityDialog
+        anchorEl={displayOptionsAnchor}
+        open={isDisplayOptionsOpen}
+        onClose={handleDisplayOptionsClose}
+        toggleableColumns={toggleableColumns}
+        columnVisibility={columnVisibility}
+        onToggleColumn={toggleColumnVisibility}
+        onShowAll={showAllColumns}
+        onReset={resetToDefault}
+        hiddenColumnsCount={hiddenColumnsCount}
+        menuWidth="350px"
+      />
+
+      <Paper elevation={1} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
+
+        {/* 테이블 헤더 컴포넌트 */}
+        <TableHeader
+          title="당일정산 목록"
+          totalItems={totalFlattenedItems}
+          countLabel="총 ##count##건의 정산"
+          indentMode={indentMode}
+          toggleIndentMode={toggleIndentMode}
+          sequentialPageNumbers={sequentialPageNumbers}
+          togglePageNumberMode={togglePageNumberMode}
+          hasPinnedColumns={hasPinnedColumns}
+          isGridReady={isGridReady}
+          toggleColumnPin={headerToggleColumnPin}
+          searchText={searchText}
+          handleSearchChange={handleSearchChange}
+          handleClearSearch={handleClearSearch}
+          showIndentToggle={true}
+          showPageNumberToggle={true}
+          showColumnPinToggle={true}
+          showSearch={true}
+          searchPlaceholder="당일정산 검색..."
+          sx={{ mb: 2 }}
+        />
+
+        <Box sx={{ width: '100%' }}>
+          <TableFilterAndPagination
+            filterProps={{
+              columns: columns,
+              filterValues: filterValues || {},
+              activeFilters: safeActiveFilters || {},
+              filterOptions: dynamicFilterOptions,
+              handleFilterChange: manualHandleFilterChange,
+              onFilter: handleFilter,
+              onClearFilters: handleClearFilters,
+              isDateFilterActive: isDateFilterActive,
+              handleOpenDateFilter: handleOpenDateFilter,
+              resetDateFilter: resetDateFilter
+            }}
+            paginationProps={{
+              count: totalFlattenedItems,
+              page: page,
+              rowsPerPage: rowsPerPage,
+              onPageChange: handlePageChangeWithLog,
+              onRowsPerPageChange: handleRowsPerPageChangeWithLog,
+              totalCount: totalFlattenedItems,
+              onExcelDownload: handleExcelDownload,
+              onPrint: handlePrint
+            }}
+          />
+        </Box>
+        
+        {/* 테이블 콘텐츠 영역 */}
+        <Box 
+          sx={{ 
+            width: '100%', 
+            mt: 2
+          }} 
+          ref={containerRef}
+        >
+          <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+            현재 페이지: {currentPage + 1} / {Math.ceil(totalFlattenedItems / currentRowsPerPage)} (페이지당 {currentRowsPerPage}행)
+            {' - 컬럼을 드래그하여 순서를 변경할 수 있습니다.'}
+          </Typography>
+          {console.log('🔍 BaseTable에 전달되는 데이터:', {
+            visibleDataLength: visibleData?.length || 0,
+            columnsLength: finalColumns?.length || 0,
+            page: currentPage,
+            rowsPerPage: currentRowsPerPage
+          })}
+          <BaseTable
+            key={`today-settlement-table-${tableKey}`}
+            columns={finalColumns}
+            data={visibleData}
+            checkable={true}
+            hierarchical={true}
+            indentMode={indentMode}
+            checkedItems={tableCheckedItems}
+            expandedRows={expandedItems}
+            allChecked={tableAllChecked}
+            onCheck={tableHandleCheck}
+            onToggleAll={tableHandleToggleAll}
+            onToggleExpand={handleToggleExpand2}
+            onSort={tableHandleSort}
+            sortConfig={tableSortConfig}
+            page={currentPage}
+            rowsPerPage={currentRowsPerPage}
+            totalCount={totalFlattenedItems}
+            sequentialPageNumbers={sequentialPageNumbers}
+            draggableColumns={draggableColumns}
+            onColumnOrderChange={updateColumns}
+            dragHandlers={dragHandlers}
+            dragInfo={dragInfo}
+            fixedHeader={true}
+            maxHeight={tableHeight}
+            tableHeaderRef={tableHeaderRef}
+            headerStyle={getTableHeaderStyles()}
+            pinnedColumns={pinnedColumns}
+          />
+          
+          {/* 테이블 리사이즈 핸들 */}
+          <TableResizeHandle 
+            resizeHandleProps={getResizeHandleProps(parseFloat(tableHeight))}
+            showIcon={true}
+            isDragging={isDragging}
+            sx={{ 
+              mt: 1,
+              opacity: isDragging ? 1 : 0.7,
+              '&:hover': { opacity: 1 }
+            }}
+          />
+        </Box>
+      </Paper>
+
+      {/* 회원상세정보 다이얼로그 */}
+      <MemberDetailDialog
+        open={memberDetailDialogOpen}
+        onClose={handleMemberDetailClose}
+        member={selectedMemberForDetail}
+        onSave={handleMemberDetailSave}
+      />
+    </PageContainer>
+  );
+};
+
+export default TodaySettlementPage; 

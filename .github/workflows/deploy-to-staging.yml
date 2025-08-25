@@ -1,0 +1,30 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ staging, develop ]  # staging이나 develop 브랜치에 푸시하면 실행
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup SSH for Staging
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/staging_key
+        chmod 600 ~/.ssh/staging_key
+        ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+    
+    - name: Deploy to Staging Server
+      run: |
+        echo "📦 Deploying to STAGING server..."
+        ssh -i ~/.ssh/staging_key \
+          ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} \
+          "cd /home/${{ secrets.STAGING_USER }} && \
+           echo 'Staging deployment at $(date)' >> deployment.log"
+        echo "✅ Staging deployment complete!"

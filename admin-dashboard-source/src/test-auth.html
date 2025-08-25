@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Test</title>
+</head>
+<body>
+    <h1>Authentication Test</h1>
+    <button onclick="checkAuth()">Check Auth</button>
+    <button onclick="testApi()">Test API</button>
+    <button onclick="showToken()">Show Token</button>
+    <button onclick="testAllApis()">Test All APIs</button>
+    <pre id="output"></pre>
+    
+    <script>
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const authToken = localStorage.getItem('authToken');
+            const userInfo = localStorage.getItem('userInfo');
+            
+            const output = {
+                hasToken: !!token,
+                tokenLength: token ? token.length : 0,
+                hasAuthToken: !!authToken,
+                authTokenLength: authToken ? authToken.length : 0,
+                userInfo: userInfo ? JSON.parse(userInfo) : null
+            };
+            
+            document.getElementById('output').textContent = JSON.stringify(output, null, 2);
+        }
+        
+        function showToken() {
+            const token = localStorage.getItem('token');
+            document.getElementById('output').textContent = 'Token:\n' + token;
+        }
+        
+        async function testApi() {
+            const token = localStorage.getItem('token');
+            
+            try {
+                const response = await fetch('http://125.187.89.85:5100/api/settlement-api/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function testAllApis() {
+            const token = localStorage.getItem('token');
+            const results = {};
+            
+            // Test settlement API
+            try {
+                const settlementResponse = await fetch('http://125.187.89.85:5100/api/settlement-api/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                results.settlement = await settlementResponse.json();
+            } catch (error) {
+                results.settlement = { error: error.message };
+            }
+            
+            // Test user status API  
+            try {
+                const userStatusResponse = await fetch('http://125.187.89.85:5100/api/user-status/all', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                results.userStatus = await userStatusResponse.json();
+            } catch (error) {
+                results.userStatus = { error: error.message };
+            }
+            
+            document.getElementById('output').textContent = JSON.stringify(results, null, 2);
+        }
+    </script>
+</body>
+</html>

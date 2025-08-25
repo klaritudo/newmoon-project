@@ -1,0 +1,65 @@
+name: Multi-Environment Deploy
+
+on:
+  push:
+    branches: 
+      - main        # main → production
+      - staging     # staging → staging server
+      - develop     # develop → dev server
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set Environment Variables
+      run: |
+        # 브랜치에 따라 자동 환경 설정
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+          echo "DEPLOY_HOST=${{ secrets.PRODUCTION_HOST }}" >> $GITHUB_ENV
+          echo "DEPLOY_USER=${{ secrets.PRODUCTION_USER }}" >> $GITHUB_ENV
+          echo "DEPLOY_KEY=${{ secrets.PRODUCTION_SSH_KEY }}" >> $GITHUB_ENV
+          echo "ENVIRONMENT=production" >> $GITHUB_ENV
+        elif [[ "${{ github.ref }}" == "refs/heads/staging" ]] || [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
+          echo "DEPLOY_HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
+          echo "DEPLOY_USER=${{ secrets.STAGING_USER }}" >> $GITHUB_ENV
+          echo "DEPLOY_KEY=${{ secrets.STAGING_SSH_KEY }}" >> $GITHUB_ENV
+          echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+        else
+          echo "DEPLOY_HOST=${{ secrets.DEV_HOST }}" >> $GITHUB_ENV
+          echo "DEPLOY_USER=${{ secrets.DEV_USER }}" >> $GITHUB_ENV
+          echo "DEPLOY_KEY=${{ secrets.DEV_SSH_KEY }}" >> $GITHUB_ENV
+          echo "ENVIRONMENT=development" >> $GITHUB_ENV
+        fi
+    
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ env.DEPLOY_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+    
+    - name: Deploy to ${{ env.ENVIRONMENT }}
+      run: |
+        echo "📦 Deploying to ${{ env.ENVIRONMENT }} server..."
+        echo "🎯 Target: ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}"
+        
+        ssh -i ~/.ssh/deploy_key \
+          ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
+          "echo '[${{ env.ENVIRONMENT }}] Deployment at $(date)' >> deployment.log"
+        
+        echo "✅ ${{ env.ENVIRONMENT }} deployment complete!"

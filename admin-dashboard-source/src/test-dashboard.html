@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Data Test</title>
+</head>
+<body>
+    <h1>Dashboard Data Test</h1>
+    <button onclick="testDashboard()">Test Dashboard Data Flow</button>
+    <pre id="output"></pre>
+    
+    <script type="module">
+        window.testDashboard = async function() {
+            const token = localStorage.getItem('token');
+            const output = document.getElementById('output');
+            
+            // Import the services
+            const apiModule = await import('./services/api.js');
+            const dashboardModule = await import('./services/dashboardDataService.js');
+            
+            output.textContent = "Testing dashboard data flow...\n\n";
+            
+            try {
+                // Test getAllDashboardData
+                const allData = await dashboardModule.getAllDashboardData();
+                
+                output.textContent += "getAllDashboardData() result:\n";
+                output.textContent += JSON.stringify(allData, null, 2);
+                
+                // Check data structure
+                output.textContent += "\n\nData Analysis:\n";
+                output.textContent += `- Has overview: ${!!allData.overview}\n`;
+                output.textContent += `- Has userMetrics: ${!!allData.userMetrics}\n`;
+                output.textContent += `- Has systemStatus: ${!!allData.systemStatus}\n`;
+                output.textContent += `- Has data flag: ${allData.hasData}\n`;
+                
+                if (allData.overview) {
+                    output.textContent += `\nOverview structure:\n`;
+                    output.textContent += `- today_totals: ${JSON.stringify(allData.overview.today_totals)}\n`;
+                    output.textContent += `- betting_stats: ${JSON.stringify(allData.overview.betting_stats)}\n`;
+                }
+                
+            } catch (error) {
+                output.textContent += `\nError: ${error.message}\n`;
+                output.textContent += error.stack;
+            }
+        }
+    </script>
+</body>
+</html>

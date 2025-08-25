@@ -1,0 +1,324 @@
+/* 사이드바 스타일 */
+
+/* 메인 사이드바 컨테이너 */
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.sidebar-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--paper-color);
+}
+
+/* 드로어 스타일 */
+.sidebar-drawer.mobile {
+  display: block;
+}
+
+.sidebar-drawer.mobile .MuiDrawer-paper {
+  box-sizing: border-box;
+  width: 280px;
+  box-shadow: var(--shadow-dark);
+  border-right: none;
+  background: var(--paper-color);
+}
+
+@media (min-width: 900px) {
+  .sidebar-drawer.mobile {
+    display: none;
+  }
+}
+
+.sidebar-drawer.desktop .MuiDrawer-paper {
+  box-sizing: border-box;
+  width: 280px;
+  box-shadow: var(--shadow-light);
+  border-right: 1px solid var(--divider-color);
+  background: var(--paper-color);
+}
+
+@media (max-width: 899px) {
+  .sidebar-drawer.desktop {
+    display: none;
+  }
+}
+
+/* 로고 영역 */
+.sidebar-logo {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-lighter, rgba(33, 150, 243, 0.04));
+}
+
+.sidebar-logo img {
+  height: 40px;
+  width: auto;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+/* 구분선 */
+.sidebar-divider {
+  opacity: 0.6;
+}
+
+/* 사용자 정보 영역 */
+.user-info {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  background-color: var(--background-color);
+  border-radius: 8px;
+  margin: 16px;
+  box-shadow: var(--shadow-light);
+  border: 1px solid var(--divider-color);
+}
+
+.user-avatar {
+  width: 42px !important;
+  height: 42px !important;
+  background-color: var(--primary-color) !important;
+  box-shadow: 0 3px 5px rgba(var(--primary-rgb, 33, 150, 243), 0.2);
+}
+
+.user-details {
+  margin-left: 16px;
+}
+
+.user-name {
+  font-weight: 600 !important;
+}
+
+.user-role {
+  color: var(--text-secondary);
+  font-size: 0.75rem !important;
+}
+
+/* 메뉴 컨테이너 */
+.menu-container {
+  flex: 1;
+  padding: 0 16px 16px;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.menu-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.menu-container::-webkit-scrollbar-thumb {
+  background-color: rgba(var(--primary-rgb, 33, 150, 243), 0.2);
+  border-radius: 10px;
+}
+
+.menu-container::-webkit-scrollbar-track {
+  background-color: var(--divider-color);
+  border-radius: 10px;
+}
+
+/* 메뉴 아이템 */
+.menu-item-wrapper {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.menu-item {
+  min-height: 48px;
+  padding: 6px 20px;
+  border-radius: 10px;
+  background-color: transparent;
+  color: var(--text-primary);
+  transition: background-color 200ms, color 200ms, box-shadow 200ms;
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-item:hover {
+  background-color: var(--primary-lighter, rgba(33, 150, 243, 0.08));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+  transition: all 0.3s ease;
+}
+
+.menu-item.active {
+  background-color: var(--primary-lighter, rgba(33, 150, 243, 0.08));
+  color: var(--primary-color);
+}
+
+.menu-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 25%;
+  height: 50%;
+  width: 4px;
+  background-color: var(--primary-color);
+  border-radius: 0 4px 4px 0;
+}
+
+/* 메뉴 아이콘 */
+.menu-icon {
+  min-width: 40px !important;
+  color: var(--icon-color);
+  transition: color 200ms;
+}
+
+.menu-icon.active {
+  color: var(--primary-color);
+}
+
+/* 메뉴 텍스트 */
+.menu-text .MuiTypography-root {
+  font-weight: 400;
+  font-size: 0.875rem;
+  transition: font-weight 200ms, color 200ms;
+  opacity: 1;
+}
+
+.menu-text.active .MuiTypography-root {
+  font-weight: 600;
+}
+
+/* 확장 아이콘 */
+.menu-expand-icon {
+  color: var(--icon-color);
+}
+
+/* 서브메뉴 컨테이너 */
+.submenu-container {
+  padding-left: 16px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  border-left: 1px dashed var(--divider-color);
+  margin-left: 24px;
+}
+
+/* 로그아웃 영역 */
+.sidebar-footer {
+  padding: 16px;
+}
+
+.logout-button {
+  border-radius: 10px !important;
+  padding: 8px 0 !important;
+  width: 100%;
+  border-color: rgba(var(--primary-rgb, 33, 150, 243), 0.3) !important;
+  color: var(--primary-color) !important;
+  background-color: var(--primary-lighter, rgba(33, 150, 243, 0.04)) !important;
+  transition: background-color 300ms, box-shadow 300ms, border-color 300ms !important;
+}
+
+.logout-button:hover {
+  border-color: var(--primary-color) !important;
+  background-color: var(--primary-lighter, rgba(33, 150, 243, 0.08)) !important;
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb, 33, 150, 243), 0.15) !important;
+}
+
+/* 가로 모드 사이드바 스타일 */
+.sidebar-horizontal {
+  width: 100%;
+  background-color: var(--paper-color);
+  box-shadow: var(--shadow-light);
+  z-index: 1200;
+  position: relative;
+  height: auto;
+  min-height: 70px;
+  margin-bottom: 10px;
+}
+
+/* 가로 메뉴 스타일 */
+.horizontal-menu {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap !important; /* 절대 줄바꿈 금지 */
+  justify-content: flex-start;
+  white-space: nowrap !important;
+}
+
+/* 스크롤바 스타일 */
+.horizontal-menu::-webkit-scrollbar {
+  height: 4px !important;
+  display: block !important;
+}
+
+.horizontal-menu::-webkit-scrollbar-thumb {
+  background-color: #d6d6d6 !important;
+  border-radius: 2px !important;
+  display: block !important;
+}
+
+.horizontal-menu::-webkit-scrollbar-thumb:hover {
+  background-color: #999 !important;
+}
+
+.horizontal-menu::-webkit-scrollbar-track {
+  background-color: transparent !important;
+  display: block !important;
+}
+
+@media (max-width: 768px) {
+  .sidebar-horizontal .MuiToolbar-root {
+    flex-direction: row !important; /* 가로 방향 유지 */
+    padding: 8px 16px;
+    overflow-x: auto;
+  }
+  
+  .sidebar-horizontal .MuiToolbar-root > div:first-of-type {
+    flex-grow: 1;
+    overflow: hidden;
+  }
+  
+  .horizontal-menu {
+    width: 100%;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+  }
+}
+
+/* 메뉴 확장 애니메이션 */
+.MuiCollapse-root {
+  transition: height 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+
+.MuiCollapse-wrapperInner {
+  transition: opacity 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+}
+
+/* 서브메뉴 아이템 애니메이션 */
+@keyframes fadeInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 비활성화된 메뉴 숨김 - 초기부터 숨김 처리 */
+.menu-item-hidden {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 새로고침 회전 애니메이션 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+} 
